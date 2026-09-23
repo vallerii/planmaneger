@@ -10,6 +10,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Phase, SizeDays, Task } from "@/lib/types";
 import { dateRu, fmtDays, phaseStats } from "@/lib/schedule";
 import TaskCard from "./TaskCard";
+import { TrashIcon, trashBtnCls } from "../ui";
 
 type Props = {
   phase: Phase;
@@ -62,8 +63,18 @@ export default function PhaseColumn(props: Props) {
       } ${isOver ? "outline-[3px] outline-offset-2 outline-accent/30 outline" : ""}`}
     >
       <div className="border-b border-line bg-white/50 px-[15px] pt-[15px] pb-3">
-        <div className="text-[11px] font-extrabold tracking-[.1em] text-muted uppercase">
-          Phase {index}
+        <div className="-mt-1 -mr-1.5 flex items-center justify-between">
+          <span className="text-[11px] font-extrabold tracking-[.1em] text-muted uppercase">
+            Phase {index}
+          </span>
+          <button
+            className={trashBtnCls}
+            title="Удалить фазу"
+            aria-label="Удалить фазу"
+            onClick={() => props.onRemove(phase.id)}
+          >
+            <TrashIcon />
+          </button>
         </div>
         <div className="mt-0.5 flex items-center gap-2">
           <input
@@ -102,22 +113,15 @@ export default function PhaseColumn(props: Props) {
             >
               →
             </button>
-            <button
-              className={iconBtn}
-              title="Удалить фазу"
-              onClick={() => props.onRemove(phase.id)}
-            >
-              ×
-            </button>
           </div>
         </div>
-        <div className="mt-2 flex justify-between gap-2 text-xs text-muted">
+        <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted">
           <span>
             <b className="text-ink">{st.progress}%</b> готово · осталось{" "}
             <b className="text-ink">{fmtDays(st.remaining)}</b> дн.
           </span>
           {dates && (
-            <span className="text-right">
+            <span>
               {dateRu(dates.begin)} → {dateRu(dates.end)}
             </span>
           )}

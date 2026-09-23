@@ -17,7 +17,7 @@ export function Btn({
   className = "",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "default" | "primary" | "ghost" | "danger";
+  variant?: "default" | "primary" | "ghost" | "danger" | "destructive";
 }) {
   const base =
     "inline-flex items-center justify-center gap-1.5 rounded-[11px] px-3 py-2 font-bold transition hover:-translate-y-px hover:shadow-soft disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
@@ -27,6 +27,7 @@ export function Btn({
     ghost:
       "text-muted hover:bg-white hover:text-ink hover:shadow-none hover:translate-y-0",
     danger: "border border-line bg-white text-bad",
+    destructive: "border border-bad bg-bad text-white hover:bg-[#9a1d13]",
   }[variant];
   return <button className={`${base} ${styles} ${className}`} {...props} />;
 }
@@ -53,7 +54,7 @@ export function Modal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-5"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-5"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -383,5 +384,72 @@ export function Stepper({
         </svg>
       </button>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------
+// Иконка корзины
+// ---------------------------------------------------------------
+export function TrashIcon({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+export const trashBtnCls =
+  "grid h-7 w-7 shrink-0 place-items-center rounded-[8px] text-[#9a988f] transition hover:bg-[#fff0ed] hover:text-bad";
+
+// ---------------------------------------------------------------
+// Модалка подтверждения удаления
+// ---------------------------------------------------------------
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmText = "Удалить",
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  children?: ReactNode;
+  confirmText?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open={open} onClose={onClose} title={title} width={460}>
+      <div className="text-[15px] leading-relaxed text-[#45443e]">
+        {children}
+      </div>
+      <div className="mt-6 flex justify-end gap-2">
+        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn
+          variant="destructive"
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+        >
+          <TrashIcon size={14} />
+          {confirmText}
+        </Btn>
+      </div>
+    </Modal>
   );
 }

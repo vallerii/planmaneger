@@ -12,12 +12,14 @@ import type {
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
 import {
+  deadlineStatus,
   fmtDays,
   initials,
   remainingTaskDays,
   sizeDays as sizeOf,
+  workdaysLabel,
 } from "@/lib/schedule";
-import { Btn, Select } from "../ui";
+import { Btn, Select, TrashIcon, trashBtnCls } from "../ui";
 import RichEditor from "./RichEditor";
 
 type Props = {
@@ -30,6 +32,10 @@ type Props = {
   onUpdate: (patch: Partial<Task>) => void;
   onCommentAdded: () => void;
   onError: (e: { message: string } | null) => void;
+  /** create — пустая форма новой задачи (ещё не сохранена в БД) */
+  mode?: "edit" | "create";
+  onCreate?: (fields: { name: string; description: string }) => void;
+  onDelete?: () => void;
 };
 
 const commentTime = new Intl.DateTimeFormat("ru-RU", {
@@ -49,7 +55,11 @@ export default function TaskDrawer({
   onUpdate,
   onCommentAdded,
   onError,
+  mode = "edit",
+  onCreate,
+  onDelete,
 }: Props) {
+  const isCreate = mode === "create";
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(task.name);
@@ -74,7 +84,9 @@ export default function TaskDrawer({
     }
   }, []);
 
+  const lastDesc = useRef(task.description);
   const onDescChange = (html: string) => {
+    lastDesc.current = html;
     pendingDesc.current = html;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(flush, 700);
@@ -107,6 +119,7 @@ export default function TaskDrawer({
   );
 
   useEffect(() => {
+    if (isCreate) return;
     let alive = true;
     supabase
       .from("comments")
@@ -155,7 +168,17 @@ export default function TaskDrawer({
       alive = false;
       supabase.removeChannel(ch);
     };
-  }, [supabase, task.id, onError, nameOf]);
+  }, [supabase, task.id, onError, nameOf, isCreate]);
+
+  function submitCreate() {
+    const name = title.trim();
+    if (!name || !onCreate) return;
+    if (timer.current) clearTimeout(timer.current);
+    pendingDesc.current = null;
+    onCreate({ name, description: lastDesc.current });
+    setOpen(false);
+    setTimeout(onClose, 200);
+  }
 
   async function addComment() {
     const body = draft.trim();
@@ -215,18 +238,35 @@ export default function TaskDrawer({
           </button>
           <input
             value={title}
+            autoFocus={isCreate}
+            placeholder={isCreate ? "Название задачи" : undefined}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => {
+              if (isCreate) return;
               const v = title.trim();
               if (v && v !== task.name) onUpdate({ name: v });
               else setTitle(task.name);
             }}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              if (isCreate) submitCreate();
+              else e.currentTarget.blur();
+            }}
             className="min-w-0 flex-1 rounded-lg bg-transparent p-1 text-xl font-extrabold tracking-tight outline-none focus:outline focus:outline-line"
           />
           <span className="shrink-0 rounded-full bg-[#efeee8] px-2 py-1 text-[10px] font-extrabold text-[#5d5b54]">
             {phaseName}
           </span>
+          {!isCreate && onDelete && (
+            <button
+              onClick={onDelete}
+              title="Удалить задачу"
+              aria-label="Удалить задачу"
+              className={trashBtnCls + " h-[34px] w-[34px]"}
+            >
+              <TrashIcon size={16} />
+            </button>
+          )}
         </div>
 
         <div className="overflow-auto p-[18px]">
@@ -243,39 +283,6 @@ export default function TaskDrawer({
                   hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
                 }))}
               />
-            </div>
-            <div className={card}>
-              <label className={lbl}>Осталось</label>
-              <div className="text-xl font-extrabold tracking-tight">
-                {fmtDays(remainingTaskDays(task, sizeDays))} дн.
-              </div>
-              <div className="mt-1 text-[11px] text-muted">
-                {task.size} = {fmtDays(sizeOf(task, sizeDays))} дн. ·{" "}
-                {task.progress}% готово
-              </div>
-            </div>
-            <div className={card}>
-              <label className={lbl}>Прогресс</label>
-              <div className="grid grid-cols-[1fr_64px] items-center gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={task.progress}
-                  onChange={(e) => setProgress(+e.target.value)}
-                  className="accent-ok"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={task.progress}
-                  onChange={(e) => setProgress(+e.target.value)}
-                  className={inp}
-                />
-              </div>
             </div>
             <div className={card}>
               <div className="flex items-center justify-between gap-3">
@@ -302,6 +309,39 @@ export default function TaskDrawer({
               </div>
             </div>
             <div className={card}>
+              <label className={lbl}>Прогресс</label>
+              <div className="grid grid-cols-[1fr_64px] items-center gap-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={task.progress}
+                  onChange={(e) => setProgress(+e.target.value)}
+                  className="accent-ok"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={task.progress}
+                  onChange={(e) => setProgress(+e.target.value)}
+                  className={inp}
+                />
+              </div>
+            </div>
+            <div className={card}>
+              <label className={lbl}>Осталось работы</label>
+              <div className="text-xl font-extrabold tracking-tight">
+                {workdaysLabel(remainingTaskDays(task, sizeDays))}
+              </div>
+              <div className="mt-1 text-[11px] text-muted">
+                {task.size} = {fmtDays(sizeOf(task, sizeDays))} дн. ·{" "}
+                {task.progress}% готово
+              </div>
+            </div>
+            <div className={card}>
               <label className={lbl}>Дедлайн</label>
               <input
                 type="date"
@@ -311,83 +351,97 @@ export default function TaskDrawer({
               />
             </div>
             <div className={card}>
-              <label className={lbl}>Комментарии</label>
-              <div className="text-xl font-extrabold tracking-tight">
-                {comments?.length ?? task.comment_count ?? 0}
-              </div>
-              <div className="mt-1 text-[11px] text-muted">
-                Обсуждение внутри задачи
-              </div>
+              <label className={lbl}>Успеваем к дедлайну?</label>
+              <DeadlineHint task={task} sizeDays={sizeDays} />
             </div>
           </div>
 
           <SectionTitle>Описание</SectionTitle>
           <RichEditor initial={task.description} onChange={onDescChange} />
 
-          <div className="mt-5 border-t border-line pt-1">
-            <SectionTitle>Обсуждение</SectionTitle>
-            {comments === null ? (
-              <div className="py-4 text-[#999]">Загрузка…</div>
-            ) : comments.length === 0 ? (
-              <div className="py-4 text-[#999]">Пока нет комментариев.</div>
-            ) : (
-              comments.map((c) => {
-                const author =
-                  c.author?.full_name || c.author?.email || "Пользователь";
-                return (
-                  <div
-                    key={c.id}
-                    className="group grid grid-cols-[34px_1fr] gap-2.5 border-b border-[#efede6] py-[11px]"
+          {!isCreate && (
+            <div className="mt-5 border-t border-line pt-1">
+              <SectionTitle>Обсуждение</SectionTitle>
+              {comments === null ? (
+                <div className="py-4 text-[#999]">Загрузка…</div>
+              ) : comments.length === 0 ? (
+                <div className="py-4 text-[#999]">Пока нет комментариев.</div>
+              ) : (
+                comments.map((c) => {
+                  const author =
+                    c.author?.full_name || c.author?.email || "Пользователь";
+                  return (
+                    <div
+                      key={c.id}
+                      className="group grid grid-cols-[34px_1fr] gap-2.5 border-b border-[#efede6] py-[11px]"
+                    >
+                      <div className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-ink text-[11px] font-black text-white">
+                        {initials(author)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-baseline gap-2">
+                          <strong className="text-xs">{author}</strong>
+                          <time className="text-[10px] text-[#999]">
+                            {commentTime.format(new Date(c.created_at))}
+                          </time>
+                          {c.author_id === me.id && (
+                            <button
+                              onClick={() => deleteComment(c.id)}
+                              className="ml-auto text-xs text-[#aaa] opacity-0 group-hover:opacity-100 hover:text-bad"
+                            >
+                              удалить
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-0.5 leading-normal break-words whitespace-pre-wrap text-[#35342f]">
+                          <Linkified text={c.body} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              <div className="mt-3 rounded-xl border border-line bg-[#faf9f6] p-[9px]">
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === "Enter")
+                      addComment();
+                  }}
+                  placeholder="Напишите комментарий или вставьте ссылку… (Ctrl+Enter — отправить)"
+                  className="min-h-[72px] w-full resize-y border-0 bg-transparent outline-none"
+                />
+                <div className="mt-1.5 flex justify-end">
+                  <Btn
+                    variant="primary"
+                    onClick={addComment}
+                    disabled={!draft.trim() || sending}
                   >
-                    <div className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-ink text-[11px] font-black text-white">
-                      {initials(author)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <strong className="text-xs">{author}</strong>
-                        <time className="text-[10px] text-[#999]">
-                          {commentTime.format(new Date(c.created_at))}
-                        </time>
-                        {c.author_id === me.id && (
-                          <button
-                            onClick={() => deleteComment(c.id)}
-                            className="ml-auto text-xs text-[#aaa] opacity-0 group-hover:opacity-100 hover:text-bad"
-                          >
-                            удалить
-                          </button>
-                        )}
-                      </div>
-                      <div className="mt-0.5 leading-normal break-words whitespace-pre-wrap text-[#35342f]">
-                        <Linkified text={c.body} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-            <div className="mt-3 rounded-xl border border-line bg-[#faf9f6] p-[9px]">
-              <textarea
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === "Enter")
-                    addComment();
-                }}
-                placeholder="Напишите комментарий или вставьте ссылку… (Ctrl+Enter — отправить)"
-                className="min-h-[72px] w-full resize-y border-0 bg-transparent outline-none"
-              />
-              <div className="mt-1.5 flex justify-end">
-                <Btn
-                  variant="primary"
-                  onClick={addComment}
-                  disabled={!draft.trim() || sending}
-                >
-                  Отправить
-                </Btn>
+                    Отправить
+                  </Btn>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
+        {isCreate && (
+          <div className="mt-auto flex items-center justify-between gap-3 border-t border-line bg-white px-[18px] py-3.5">
+            <span className="text-[11px] text-muted">
+              Комментарии появятся после создания задачи
+            </span>
+            <div className="flex gap-2">
+              <Btn onClick={close}>Отмена</Btn>
+              <Btn
+                variant="primary"
+                onClick={submitCreate}
+                disabled={!title.trim()}
+              >
+                Создать задачу
+              </Btn>
+            </div>
+          </div>
+        )}
       </aside>
     </>
   );
@@ -420,6 +474,60 @@ function Linkified({ text }: { text: string }) {
           <span key={i}>{p}</span>
         ),
       )}
+    </>
+  );
+}
+
+function DeadlineHint({ task, sizeDays }: { task: Task; sizeDays: SizeDays }) {
+  const st = deadlineStatus(task, sizeDays);
+  const big = "text-xl font-extrabold tracking-tight";
+  const sub = "mt-1 text-[11px] text-muted";
+  if (!st)
+    return (
+      <>
+        <div className={big + " text-[#b5b3aa]"}>—</div>
+        <div className={sub}>Поставьте дедлайн, чтобы проверить сроки</div>
+      </>
+    );
+  if (st.kind === "done")
+    return (
+      <>
+        <div className={big + " text-ok"}>✓ Готово</div>
+        <div className={sub}>Задача выполнена</div>
+      </>
+    );
+  if (st.kind === "overdue")
+    return (
+      <>
+        <div className={big + " text-bad"}>Просрочено</div>
+        <div className={sub}>
+          Дедлайн прошёл, осталось {workdaysLabel(st.need)} работы
+        </div>
+      </>
+    );
+  if (st.kind === "late")
+    return (
+      <>
+        <div className={big + " text-bad"}>Не успеваем</div>
+        <div className={sub}>
+          Нужно {workdaysLabel(st.need)}, до дедлайна {workdaysLabel(st.avail)}
+        </div>
+      </>
+    );
+  if (st.kind === "tight")
+    return (
+      <>
+        <div className={big + " text-[#9a6b00]"}>Впритык</div>
+        <div className={sub}>
+          Нужно {workdaysLabel(st.need)}, до дедлайна {workdaysLabel(st.avail)}{" "}
+          — без запаса
+        </div>
+      </>
+    );
+  return (
+    <>
+      <div className={big + " text-ok"}>Успеваем</div>
+      <div className={sub}>Запас {workdaysLabel(st.slack)}</div>
     </>
   );
 }

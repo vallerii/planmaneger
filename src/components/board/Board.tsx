@@ -37,7 +37,17 @@ import type {
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
 import { buildSchedule, dateRu, fmtDays, parseDate } from "@/lib/schedule";
-import { Brand, Btn, Field, Modal, Select, Toast, inputCls } from "../ui";
+import {
+  Brand,
+  Btn,
+  ConfirmDialog,
+  Field,
+  Modal,
+  Select,
+  Toast,
+  TrashIcon,
+  inputCls,
+} from "../ui";
 import PhaseColumn from "./PhaseColumn";
 import { TaskCardView } from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
@@ -72,7 +82,9 @@ export default function Board({
   const [modal, setModal] = useState<
     null | "phase" | "task" | "date" | "settings" | "members"
   >(null);
-  const [targetPhase, setTargetPhase] = useState<string | null>(null);
+  const [draftTask, setDraftTask] = useState<Task | null>(null);
+  const [confirmTask, setConfirmTask] = useState<string | null>(null);
+  const [confirmPhase, setConfirmPhase] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{
     type: "task" | "phase";
     id: string;
@@ -278,9 +290,12 @@ export default function Board({
     fail((await supabase.from("phases").update({ name }).eq("id", id)).error);
   }
 
-  async function removePhase(id: string) {
-    const count = columns[id]?.length ?? 0;
-    if (count && !confirm("Удалить фазу вместе с задачами?")) return;
+  async function removePhase(id: string, moveTo: string | null) {
+    const moving = columns[id] ?? [];
+    if (moveTo && moving.length) {
+      // переносим задачи в конец выбранной фазы, потом удаляем фазу
+      await persistColumn(moveTo, [...(columns[moveTo] ?? []), ...moving]);
+    }
     setPhases((ps) => ps.filter((p) => p.id !== id));
     setTasks((ts) => ts.filter((t) => t.phase_id !== id));
     fail((await supabase.from("phases").delete().eq("id", id)).error);
@@ -307,7 +322,8 @@ export default function Board({
   }
 
   // ---------- tasks ----------
-  async function addTask(phaseId: string, name: string, size: Size) {
+  async function addTask(draft: Task) {
+    const phaseId = draft.phase_id;
     const col = columns[phaseId] ?? [];
     const position = col.length
       ? Math.max(...col.map((t) => t.position)) + 1
@@ -317,8 +333,12 @@ export default function Board({
       .insert({
         project_id: project.id,
         phase_id: phaseId,
-        name,
-        size,
+        name: draft.name,
+        size: draft.size,
+        description: draft.description,
+        progress: draft.progress,
+        needs_discussion: draft.needs_discussion,
+        deadline: draft.deadline,
         position,
       })
       .select()
@@ -343,7 +363,6 @@ export default function Board({
   );
 
   async function deleteTask(id: string) {
-    if (!confirm("Удалить задачу?")) return;
     setTasks((ts) => ts.filter((t) => t.id !== id));
     if (activeTaskId === id) setActiveTaskId(null);
     fail((await supabase.from("tasks").delete().eq("id", id)).error);
@@ -614,18 +633,30 @@ export default function Board({
                   sizeDays={sd}
                   dates={schedule.perPhase[p.id]}
                   onRename={renamePhase}
-                  onRemove={removePhase}
+                  onRemove={setConfirmPhase}
                   onMove={movePhase}
                   onAddTask={() => {
-                    setTargetPhase(p.id);
-                    setModal("task");
+                    setActiveTaskId(null);
+                    setDraftTask({
+                      id: "new",
+                      project_id: project.id,
+                      phase_id: p.id,
+                      name: "",
+                      size: "M",
+                      description: "",
+                      progress: 0,
+                      needs_discussion: false,
+                      deadline: null,
+                      position: 0,
+                      comment_count: 0,
+                    });
                   }}
                   onOpenTask={(id) =>
                     Date.now() - lastDragEnd.current > 300 &&
                     setActiveTaskId(id)
                   }
                   onUpdateTask={updateTask}
-                  onDeleteTask={deleteTask}
+                  onDeleteTask={setConfirmTask}
                   isFirst={idx === 0}
                   isLast={idx === phases.length - 1}
                 />
@@ -669,6 +700,7 @@ export default function Board({
           members={members}
           onClose={() => setActiveTaskId(null)}
           onUpdate={(patch) => updateTask(activeTask.id, patch)}
+          onDelete={() => setConfirmTask(activeTask.id)}
           onCommentAdded={() =>
             setTasks((ts) =>
               ts.map((t) =>
@@ -690,18 +722,28 @@ export default function Board({
         onClose={() => setModal(null)}
         onSubmit={(name) => addPhase(name)}
       />
-      <NameModal
-        open={modal === "task"}
-        title="Новая задача"
-        placeholder="Например: Email-уведомления"
-        cta="Добавить"
-        withSize
-        sizeDays={sd}
-        onClose={() => setModal(null)}
-        onSubmit={(name, size) =>
-          targetPhase && addTask(targetPhase, name, size)
-        }
-      />
+      {draftTask && (
+        <TaskDrawer
+          key={"new-" + draftTask.phase_id}
+          mode="create"
+          task={draftTask}
+          phaseName={
+            phases.find((p) => p.id === draftTask.phase_id)?.name ?? ""
+          }
+          sizeDays={sd}
+          me={me}
+          members={members}
+          onClose={() => setDraftTask(null)}
+          onUpdate={(patch) =>
+            setDraftTask((d) => (d ? { ...d, ...patch } : d))
+          }
+          onCreate={({ name, description }) => {
+            if (draftTask) addTask({ ...draftTask, name, description });
+          }}
+          onCommentAdded={() => {}}
+          onError={fail}
+        />
+      )}
       {modal === "date" && (
         <DateModal
           open
@@ -733,6 +775,25 @@ export default function Board({
         setMembers={setMembers}
         toast={toast}
       />
+      <ConfirmDialog
+        open={!!confirmTask}
+        title="Удалить задачу?"
+        onClose={() => setConfirmTask(null)}
+        onConfirm={() => confirmTask && deleteTask(confirmTask)}
+      >
+        Задача «<b>{tasks.find((t) => t.id === confirmTask)?.name}</b>» будет
+        удалена вместе с описанием и комментариями. Это действие нельзя
+        отменить.
+      </ConfirmDialog>
+      {confirmPhase && (
+        <DeletePhaseDialog
+          phase={phases.find((p) => p.id === confirmPhase)!}
+          taskCount={(columns[confirmPhase] ?? []).length}
+          otherPhases={phases.filter((p) => p.id !== confirmPhase)}
+          onClose={() => setConfirmPhase(null)}
+          onConfirm={(moveTo) => removePhase(confirmPhase, moveTo)}
+        />
+      )}
       <Toast text={toastText} />
     </div>
   );
@@ -930,6 +991,115 @@ function SettingsModal({
             Сохранить
           </Btn>
         </div>
+      </div>
+    </Modal>
+  );
+}
+
+function DeletePhaseDialog({
+  phase,
+  taskCount,
+  otherPhases,
+  onClose,
+  onConfirm,
+}: {
+  phase: Phase;
+  taskCount: number;
+  otherPhases: Phase[];
+  onClose: () => void;
+  onConfirm: (moveTo: string | null) => void;
+}) {
+  const canMove = taskCount > 0 && otherPhases.length > 0;
+  const [mode, setMode] = useState<"move" | "delete">(
+    canMove ? "move" : "delete",
+  );
+  const [target, setTarget] = useState(otherPhases[0]?.id ?? "");
+  const radio = (on: boolean) =>
+    `flex cursor-pointer gap-3 rounded-xl border p-3 transition ${
+      on ? "border-ink/40 bg-[#faf9f6]" : "border-line hover:border-[#c9c6bb]"
+    }`;
+  const dot = (on: boolean) =>
+    `mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${on ? "border-ink" : "border-[#c9c6bb]"}`;
+
+  return (
+    <Modal open onClose={onClose} title="Удалить фазу?" width={480}>
+      {taskCount === 0 ? (
+        <p className="text-[15px] leading-relaxed text-[#45443e]">
+          Фаза «<b>{phase.name}</b>» пустая и будет удалена.
+        </p>
+      ) : (
+        <>
+          <p className="text-[15px] leading-relaxed text-[#45443e]">
+            В фазе «<b>{phase.name}</b>» {taskCount}{" "}
+            {taskCount === 1 ? "задача" : taskCount < 5 ? "задачи" : "задач"}.
+            Что с ними сделать?
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            {canMove && (
+              <div
+                className={radio(mode === "move")}
+                onClick={() => setMode("move")}
+              >
+                <span className={dot(mode === "move")}>
+                  {mode === "move" && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="font-bold">
+                    Перенести задачи в другую фазу
+                  </div>
+                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                    <Select
+                      value={target}
+                      onChange={(v) => {
+                        setTarget(v);
+                        setMode("move");
+                      }}
+                      options={otherPhases.map((p) => ({
+                        value: p.id,
+                        label: p.name,
+                      }))}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div
+              className={radio(mode === "delete")}
+              onClick={() => setMode("delete")}
+            >
+              <span className={dot(mode === "delete")}>
+                {mode === "delete" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-ink" />
+                )}
+              </span>
+              <div>
+                <div className="font-bold text-bad">
+                  Удалить вместе с задачами
+                </div>
+                <div className="text-sm text-muted">
+                  Задачи и их комментарии удалятся безвозвратно
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      <div className="mt-6 flex justify-end gap-2">
+        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn
+          variant="destructive"
+          onClick={() => {
+            onConfirm(mode === "move" && canMove ? target : null);
+            onClose();
+          }}
+        >
+          <TrashIcon size={14} />
+          {mode === "move" && canMove
+            ? "Перенести и удалить фазу"
+            : "Удалить фазу"}
+        </Btn>
       </div>
     </Modal>
   );

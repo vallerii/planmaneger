@@ -4,8 +4,9 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { Select } from "../ui";
+import { Select, TrashIcon, trashBtnCls } from "../ui";
 import {
+  deadlineStatus,
   fmtDays,
   plainFromHtml,
   remainingTaskDays,
@@ -34,6 +35,7 @@ export function TaskCardView({
 }: ViewProps) {
   const overdue = !!t.deadline && t.deadline < todayISO() && t.progress < 100;
   const desc = plainFromHtml(t.description);
+  const dl = deadlineStatus(t, sizeDays);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
@@ -50,18 +52,20 @@ export function TaskCardView({
         <div className="min-h-9 flex-1 leading-tight font-bold break-words">
           {t.name}
         </div>
-        <Select
-          size="sm"
-          value={t.size}
-          ariaLabel="Размер задачи"
-          menuWidth={150}
-          onChange={(v) => onUpdate?.({ size: v })}
-          options={SIZES.map((s) => ({
-            value: s,
-            label: s,
-            hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
-          }))}
-        />
+        {onDelete && (
+          <button
+            onPointerDown={stop}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            title="Удалить задачу"
+            aria-label="Удалить задачу"
+            className={`${trashBtnCls} -mt-1 -mr-1.5`}
+          >
+            <TrashIcon />
+          </button>
+        )}
       </div>
 
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
@@ -70,6 +74,12 @@ export function TaskCardView({
           <Badge className="bg-[#fff5d8] text-[#6b4c00]">💬 обсудить</Badge>
         )}
         {!!t.comment_count && <Badge>{t.comment_count} комм.</Badge>}
+        {dl?.kind === "tight" && (
+          <Badge className="bg-[#fff5d8] text-[#6b4c00]">⚠ впритык</Badge>
+        )}
+        {dl?.kind === "late" && (
+          <Badge className="bg-[#fff0ed] text-bad">⚠ не успеваем</Badge>
+        )}
       </div>
 
       {desc && (
@@ -90,19 +100,18 @@ export function TaskCardView({
           осталось {fmtDays(remainingTaskDays(t, sizeDays))} из{" "}
           {fmtDays(sizeOf(t, sizeDays))} дн.
         </span>
-        {onDelete && (
-          <button
-            onPointerDown={stop}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            title="Удалить"
-            className="px-1 text-base text-[#aaa] opacity-0 group-hover:opacity-100 hover:text-bad"
-          >
-            ×
-          </button>
-        )}
+        <Select
+          size="sm"
+          value={t.size}
+          ariaLabel="Размер задачи"
+          menuWidth={150}
+          onChange={(v) => onUpdate?.({ size: v })}
+          options={SIZES.map((s) => ({
+            value: s,
+            label: s,
+            hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
+          }))}
+        />
       </div>
 
       <label

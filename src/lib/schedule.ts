@@ -127,3 +127,47 @@ export function initials(name?: string | null) {
       .join("") || "?"
   );
 }
+
+/** Рабочие дни (пн–пт) от сегодня до дедлайна включительно. */
+export function workdaysUntil(deadline: string, from: Date = new Date()) {
+  const end = parseDate(deadline);
+  const d = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  let n = 0;
+  while (d <= end) {
+    if (d.getDay() !== 0 && d.getDay() !== 6) n++;
+    d.setDate(d.getDate() + 1);
+  }
+  return n;
+}
+
+export type DeadlineStatus =
+  | { kind: "done" }
+  | { kind: "overdue"; need: number }
+  | { kind: "late"; need: number; avail: number }
+  | { kind: "tight"; need: number; avail: number }
+  | { kind: "ok"; slack: number };
+
+/** Сравнение оставшейся работы с рабочими днями до дедлайна. null — дедлайна нет. */
+export function deadlineStatus(t: Task, sd: SizeDays): DeadlineStatus | null {
+  if (!t.deadline) return null;
+  if ((t.progress || 0) >= 100) return { kind: "done" };
+  const need = remainingTaskDays(t, sd);
+  if (t.deadline < todayISO()) return { kind: "overdue", need };
+  const avail = workdaysUntil(t.deadline);
+  const slack = avail - need;
+  if (slack < 0) return { kind: "late", need, avail };
+  if (slack < 1) return { kind: "tight", need, avail };
+  return { kind: "ok", slack };
+}
+
+export function plural(n: number, one: string, few: string, many: string) {
+  const a = Math.abs(n) % 100,
+    b = a % 10;
+  if (!Number.isInteger(n)) return few;
+  if (b === 1 && a !== 11) return one;
+  if (b >= 2 && b <= 4 && (a < 12 || a > 14)) return few;
+  return many;
+}
+
+export const workdaysLabel = (n: number) =>
+  `${fmtDays(n)} раб. ${plural(n, "день", "дня", "дней")}`;
