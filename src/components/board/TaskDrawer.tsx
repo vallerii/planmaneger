@@ -17,7 +17,7 @@ import {
   remainingTaskDays,
   sizeDays as sizeOf,
 } from "@/lib/schedule";
-import { Btn } from "../ui";
+import { Btn, Select } from "../ui";
 import RichEditor from "./RichEditor";
 
 type Props = {
@@ -233,17 +233,16 @@ export default function TaskDrawer({
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div className={card}>
               <label className={lbl}>Размер</label>
-              <select
-                className={inp}
+              <Select
                 value={task.size}
-                onChange={(e) => onUpdate({ size: e.target.value as Size })}
-              >
-                {SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s} · {sizeDays[s]} дн.
-                  </option>
-                ))}
-              </select>
+                onChange={(v: Size) => onUpdate({ size: v })}
+                className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
+                options={SIZES.map((s) => ({
+                  value: s,
+                  label: s,
+                  hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
+                }))}
+              />
             </div>
             <div className={card}>
               <label className={lbl}>Осталось</label>

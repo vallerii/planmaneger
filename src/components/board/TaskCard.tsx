@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
 import { SIZES } from "@/lib/types";
+import { Select } from "../ui";
 import {
   fmtDays,
   plainFromHtml,
@@ -49,17 +50,18 @@ export function TaskCardView({
         <div className="min-h-9 flex-1 leading-tight font-bold break-words">
           {t.name}
         </div>
-        <select
+        <Select
+          size="sm"
           value={t.size}
-          onPointerDown={stop}
-          onClick={stop}
-          onChange={(e) => onUpdate?.({ size: e.target.value as Size })}
-          className="rounded-[7px] border-0 bg-[#eeece5] px-1 py-1 text-[11px] font-black"
-        >
-          {SIZES.map((s) => (
-            <option key={s}>{s}</option>
-          ))}
-        </select>
+          ariaLabel="Размер задачи"
+          menuWidth={150}
+          onChange={(v) => onUpdate?.({ size: v })}
+          options={SIZES.map((s) => ({
+            value: s,
+            label: s,
+            hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
+          }))}
+        />
       </div>
 
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">

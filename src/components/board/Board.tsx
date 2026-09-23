@@ -37,7 +37,7 @@ import type {
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
 import { buildSchedule, dateRu, fmtDays, parseDate } from "@/lib/schedule";
-import { Brand, Btn, Field, Modal, Toast, inputCls } from "../ui";
+import { Brand, Btn, Field, Modal, Select, Toast, inputCls } from "../ui";
 import PhaseColumn from "./PhaseColumn";
 import { TaskCardView } from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
@@ -696,6 +696,7 @@ export default function Board({
         placeholder="Например: Email-уведомления"
         cta="Добавить"
         withSize
+        sizeDays={sd}
         onClose={() => setModal(null)}
         onSubmit={(name, size) =>
           targetPhase && addTask(targetPhase, name, size)
@@ -768,6 +769,7 @@ function NameModal({
   placeholder,
   cta,
   withSize,
+  sizeDays,
   onClose,
   onSubmit,
 }: {
@@ -776,6 +778,7 @@ function NameModal({
   placeholder: string;
   cta: string;
   withSize?: boolean;
+  sizeDays?: SizeDays;
   onClose: () => void;
   onSubmit: (name: string, size: Size) => void;
 }) {
@@ -802,15 +805,17 @@ function NameModal({
       </Field>
       {withSize && (
         <Field label="Размер">
-          <select
-            className={inputCls}
+          <Select
             value={size}
-            onChange={(e) => setSize(e.target.value as Size)}
-          >
-            {SIZES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+            onChange={setSize}
+            options={SIZES.map((s) => ({
+              value: s,
+              label: s,
+              hint: sizeDays
+                ? `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`
+                : undefined,
+            }))}
+          />
         </Field>
       )}
       <div className="mt-5 flex justify-end gap-2">
