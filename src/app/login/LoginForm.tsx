@@ -11,9 +11,17 @@ const GOOGLE_ENABLED = false;
 export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next") || "/";
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
+  const rawNext = params.get("next") || "/";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
+  // приглашение: /login?invite=1&email=...&project=...&next=/projects/<id>
+  const invitedEmail = params.get("email") ?? "";
+  const invitedProject = params.get("project");
+  const isInvite = params.get("invite") === "1";
+  const [mode, setMode] = useState<"signin" | "signup">(
+    isInvite ? "signup" : "signin",
+  );
+  const [email, setEmail] = useState(invitedEmail);
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -76,6 +84,21 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-[420px] rounded-[18px] border border-line bg-white p-6 shadow-soft">
       <Brand />
+      {isInvite && (
+        <div className="mt-5 rounded-xl border border-[#cfe6db] bg-[#eef7f2] px-3.5 py-3 text-sm text-[#0b5a40]">
+          Вас пригласили в проект
+          {invitedProject ? (
+            <>
+              {" "}
+              «<b>{invitedProject}</b>»
+            </>
+          ) : null}
+          .{" "}
+          {mode === "signup"
+            ? "Зарегистрируйтесь с этим email — проект откроется сразу после входа."
+            : "Войдите с этим email — проект появится в вашем списке."}
+        </div>
+      )}
       <h1 className="mt-5 text-2xl font-extrabold tracking-tight">
         {mode === "signin" ? "Вход" : "Регистрация"}
       </h1>

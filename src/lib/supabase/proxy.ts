@@ -40,8 +40,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   if (user && path === "/login") {
+    const next = request.nextUrl.searchParams.get("next") || "/";
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = next.startsWith("/") && !next.startsWith("//") ? next : "/";
     url.search = "";
     return NextResponse.redirect(url);
   }

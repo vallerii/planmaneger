@@ -762,6 +762,7 @@ export default function Board({
         open={modal === "members"}
         onClose={() => setModal(null)}
         projectId={project.id}
+        projectName={project.name}
         isOwner={isOwner}
         me={me}
         members={members}

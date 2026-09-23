@@ -4,12 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { Invite, Member, Profile } from "@/lib/types";
 import { initials } from "@/lib/schedule";
-import { Btn, Modal, inputCls } from "../ui";
+import { Btn, ConfirmDialog, Modal, inputCls } from "../ui";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   projectId: string;
+  projectName: string;
   isOwner: boolean;
   me: Profile;
   members: Member[];
@@ -17,10 +18,48 @@ type Props = {
   toast: (t: string) => void;
 };
 
+/** Ссылка-приглашение: открывает регистрацию с уже заполненным email и ведёт в проект. */
+function inviteLink(email: string, projectId: string, projectName: string) {
+  const q = new URLSearchParams({
+    invite: "1",
+    email,
+    project: projectName,
+    next: `/projects/${projectId}`,
+  });
+  return `${window.location.origin}/login?${q.toString()}`;
+}
+
+async function copy(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const CopyIcon = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden
+  >
+    <rect x="9" y="9" width="12" height="12" rx="2" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </svg>
+);
+
 export default function MembersModal({
   open,
   onClose,
   projectId,
+  projectName,
   isOwner,
   me,
   members,
@@ -32,6 +71,13 @@ export default function MembersModal({
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [last, setLast] = useState<{
+    email: string;
+    link: string;
+    added: boolean;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [removeId, setRemoveId] = useState<string | null>(null);
 
   async function reload() {
     const [{ data: m }, { data: inv }] = await Promise.all([
@@ -52,8 +98,13 @@ export default function MembersModal({
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (open) reload();
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      reload();
+    } else {
+      setLast(null);
+      setError(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -69,12 +120,29 @@ export default function MembersModal({
     setBusy(false);
     if (error) return setError(error.message);
     setEmail("");
-    toast(data === "added" ? "Участник добавлен" : "Приглашение сохранено");
+    setCopied(false);
+    setLast({
+      email: v,
+      link: inviteLink(v, projectId, projectName),
+      added: data === "added",
+    });
     reload();
   }
 
+  async function copyLast() {
+    if (!last) return;
+    if (await copy(last.link)) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  async function copyFor(addr: string) {
+    if (await copy(inviteLink(addr, projectId, projectName)))
+      toast("Ссылка скопирована");
+  }
+
   async function removeMember(uid: string) {
-    if (!confirm("Убрать участника из проекта?")) return;
     const { error } = await supabase
       .from("project_members")
       .delete()
@@ -90,12 +158,18 @@ export default function MembersModal({
       .delete()
       .eq("id", id);
     if (error) return setError(error.message);
+    if (last && invites.find((i) => i.id === id)?.email === last.email)
+      setLast(null);
     reload();
   }
 
+  const smallBtn =
+    "grid h-8 w-8 shrink-0 place-items-center rounded-[8px] text-[#9a988f] transition hover:bg-[#f0efe9] hover:text-ink";
+  const removing = members.find((m) => m.user_id === removeId);
+
   return (
     <Modal open={open} onClose={onClose} title="Участники проекта" width={560}>
-      <div className="max-h-[50vh] overflow-auto">
+      <div className="max-h-[45vh] overflow-auto">
         {members.map((m) => {
           const name = m.profile?.full_name || m.profile?.email || "—";
           return (
@@ -122,9 +196,9 @@ export default function MembersModal({
               </span>
               {isOwner && m.role !== "owner" && (
                 <button
-                  onClick={() => removeMember(m.user_id)}
-                  className="text-lg text-[#aaa] hover:text-bad"
-                  title="Убрать"
+                  onClick={() => setRemoveId(m.user_id)}
+                  className={smallBtn + " hover:text-bad"}
+                  title="Убрать из проекта"
                 >
                   ×
                 </button>
@@ -145,13 +219,22 @@ export default function MembersModal({
               <div className="text-xs text-muted">ждёт регистрации</div>
             </div>
             {isOwner && (
-              <button
-                onClick={() => cancelInvite(i.id)}
-                className="text-lg text-[#aaa] hover:text-bad"
-                title="Отменить приглашение"
-              >
-                ×
-              </button>
+              <>
+                <button
+                  onClick={() => copyFor(i.email)}
+                  className={smallBtn}
+                  title="Скопировать ссылку-приглашение"
+                >
+                  <CopyIcon />
+                </button>
+                <button
+                  onClick={() => cancelInvite(i.id)}
+                  className={smallBtn + " hover:text-bad"}
+                  title="Отменить приглашение"
+                >
+                  ×
+                </button>
+              </>
             )}
           </div>
         ))}
@@ -176,11 +259,50 @@ export default function MembersModal({
               Пригласить
             </Btn>
           </div>
-          <p className="mt-2 text-[11px] text-muted">
-            Если у человека уже есть аккаунт — он сразу получит доступ. Если нет
-            — отправьте ему ссылку на сайт: после регистрации с этим email
-            проект появится у него автоматически.
-          </p>
+
+          {last ? (
+            <div className="mt-3 rounded-xl border border-[#cfe6db] bg-[#eef7f2] p-3">
+              <div className="text-sm text-[#0b5a40]">
+                {last.added ? (
+                  <>
+                    <b>{last.email}</b> уже есть в системе и добавлен в проект.
+                    Отправьте ссылку, чтобы открыть проект:
+                  </>
+                ) : (
+                  <>
+                    Отправьте <b>{last.email}</b> эту ссылку (в Telegram,
+                    WhatsApp, почтой). По ней откроется регистрация с уже
+                    заполненным email, а после входа — этот проект.
+                  </>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <input
+                  readOnly
+                  value={last.link}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="min-w-0 flex-1 rounded-[9px] border border-[#cfe6db] bg-white px-2.5 py-2 text-xs text-[#35342f] outline-none"
+                />
+                <Btn
+                  onClick={copyLast}
+                  className={copied ? "border-ok text-ok" : ""}
+                >
+                  {copied ? (
+                    "✓ Скопировано"
+                  ) : (
+                    <>
+                      <CopyIcon /> Скопировать
+                    </>
+                  )}
+                </Btn>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-muted">
+              После приглашения появится ссылка — отправьте её человеку.
+              Скопировать её снова можно иконкой рядом с приглашением.
+            </p>
+          )}
         </>
       ) : (
         <p className="mt-4 text-[11px] text-muted">
@@ -191,6 +313,18 @@ export default function MembersModal({
       <div className="mt-5 flex justify-end">
         <Btn onClick={onClose}>Готово</Btn>
       </div>
+
+      <ConfirmDialog
+        open={!!removeId}
+        title="Убрать участника?"
+        confirmText="Убрать"
+        onClose={() => setRemoveId(null)}
+        onConfirm={() => removeId && removeMember(removeId)}
+      >
+        <b>{removing?.profile?.full_name || removing?.profile?.email}</b>{" "}
+        потеряет доступ к проекту «{projectName}». Задачи и комментарии
+        останутся.
+      </ConfirmDialog>
     </Modal>
   );
 }
