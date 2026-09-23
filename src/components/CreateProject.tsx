@@ -15,11 +15,8 @@ export default function CreateProject() {
   const [name, setName] = useState("");
   const [start, setStart] = useState(todayISO());
   const [count, setCount] = useState(3);
-  const [phaseNames, setPhaseNames] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const phaseName = (i: number) => phaseNames[i]?.trim() || defaultName(i);
 
   async function create() {
     if (!name.trim() || busy) return;
@@ -44,7 +41,7 @@ export default function CreateProject() {
     const { error: phErr } = await supabase.from("phases").insert(
       Array.from({ length: count }, (_, i) => ({
         project_id: project.id,
-        name: phaseName(i),
+        name: defaultName(i),
         position: i,
       })),
     );
@@ -93,34 +90,8 @@ export default function CreateProject() {
               max={MAX_PHASES}
             />
             <span className="text-sm text-muted">
-              {count} {plural(count, "фаза", "фазы", "фаз")} · названия можно
-              поменять ниже или позже на доске
+              {count} {plural(count, "фаза", "фазы", "фаз")}
             </span>
-          </div>
-
-          <div className="mt-3 grid max-h-[220px] grid-cols-2 gap-2 overflow-auto pr-1">
-            {Array.from({ length: count }, (_, i) => (
-              <label
-                key={i}
-                className="flex items-center gap-2 rounded-[10px] border border-line bg-[#fafafa] px-2.5 py-1.5 focus-within:border-ink/40 focus-within:bg-white"
-              >
-                <span className="shrink-0 text-[10px] font-extrabold tracking-[.08em] text-muted uppercase">
-                  {i}
-                </span>
-                <input
-                  value={phaseNames[i] ?? ""}
-                  placeholder={defaultName(i)}
-                  onChange={(e) =>
-                    setPhaseNames((ns) => {
-                      const next = [...ns];
-                      next[i] = e.target.value;
-                      return next;
-                    })
-                  }
-                  className="min-w-0 flex-1 bg-transparent py-1 text-sm font-bold outline-none placeholder:font-semibold placeholder:text-[#aaa]"
-                />
-              </label>
-            ))}
           </div>
         </div>
 

@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Brand } from "@/components/ui";
 import UserMenu from "@/components/UserMenu";
 import CreateProject from "@/components/CreateProject";
+import ProjectCard from "@/components/ProjectCard";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -58,37 +58,18 @@ export default async function Home() {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((p) => (
-              <Link
+              <ProjectCard
                 key={p.id}
-                href={`/projects/${p.id}`}
-                className="group rounded-[17px] border border-line bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-soft"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <h2 className="text-lg font-extrabold tracking-tight group-hover:text-accent">
-                    {p.name}
-                  </h2>
-                  {p.owner_id !== auth.user!.id && (
-                    <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">
-                      гость
-                    </span>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
-                  <span>
-                    <b className="text-ink">{count(p.phases)}</b> фаз
-                  </span>
-                  <span>
-                    <b className="text-ink">{count(p.tasks)}</b> задач
-                  </span>
-                  <span>
-                    <b className="text-ink">{count(p.project_members)}</b>{" "}
-                    участн.
-                  </span>
-                  <span>
-                    старт {new Date(p.start_date).toLocaleDateString("ru-RU")}
-                  </span>
-                </div>
-              </Link>
+                p={{
+                  id: p.id,
+                  name: p.name,
+                  startDate: p.start_date,
+                  phases: count(p.phases),
+                  tasks: count(p.tasks),
+                  members: count(p.project_members),
+                  isOwner: p.owner_id === auth.user!.id,
+                }}
+              />
             ))}
           </div>
         )}

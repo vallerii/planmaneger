@@ -52,6 +52,7 @@ import PhaseColumn from "./PhaseColumn";
 import { TaskCardView } from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
 import MembersModal from "./MembersModal";
+import ProjectTitle from "./ProjectTitle";
 
 type Props = {
   initialProject: Project;
@@ -85,6 +86,7 @@ export default function Board({
   const [draftTask, setDraftTask] = useState<Task | null>(null);
   const [confirmTask, setConfirmTask] = useState<string | null>(null);
   const [confirmPhase, setConfirmPhase] = useState<string | null>(null);
+  const [confirmProject, setConfirmProject] = useState(false);
   const [dragging, setDragging] = useState<{
     type: "task" | "phase";
     id: string;
@@ -252,12 +254,6 @@ export default function Board({
   }
 
   async function deleteProject() {
-    if (
-      !confirm(
-        `Удалить проект «${project.name}» со всеми фазами и задачами? Это необратимо.`,
-      )
-    )
-      return;
     const { error } = await supabase
       .from("projects")
       .delete()
@@ -550,16 +546,10 @@ export default function Board({
           <Link href="/" className="shrink-0" title="Все проекты">
             <Brand />
           </Link>
-          <input
-            key={project.name}
-            defaultValue={project.name}
-            onBlur={(e) => {
-              const v = e.target.value.trim();
-              if (v && v !== project.name) updateProject({ name: v });
-              else e.target.value = project.name;
-            }}
-            onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            className="min-w-[180px] flex-1 rounded-[9px] bg-transparent px-2 py-1.5 font-bold outline-none hover:bg-white hover:outline hover:outline-line focus:bg-white focus:outline focus:outline-line"
+          <ProjectTitle
+            projectId={project.id}
+            name={project.name}
+            onRename={(name) => updateProject({ name })}
           />
           <div className="flex w-full gap-2 overflow-x-auto md:w-auto">
             <Btn onClick={() => setModal("date")}>
@@ -762,7 +752,10 @@ export default function Board({
             updateProject({ size_days: v });
             toast("Настройки сохранены");
           }}
-          onDelete={deleteProject}
+          onDelete={() => {
+            setModal(null);
+            setConfirmProject(true);
+          }}
         />
       )}
       <MembersModal
@@ -775,6 +768,17 @@ export default function Board({
         setMembers={setMembers}
         toast={toast}
       />
+      <ConfirmDialog
+        open={confirmProject}
+        title="Удалить проект?"
+        confirmText="Удалить проект"
+        onClose={() => setConfirmProject(false)}
+        onConfirm={deleteProject}
+      >
+        Проект «<b>{project.name}</b>» будет удалён вместе со всеми фазами (
+        {phases.length}), задачами ({tasks.length}) и комментариями. Участники
+        потеряют к нему доступ. Это действие нельзя отменить.
+      </ConfirmDialog>
       <ConfirmDialog
         open={!!confirmTask}
         title="Удалить задачу?"
@@ -971,6 +975,7 @@ function SettingsModal({
       <div className="mt-5 flex flex-wrap justify-between gap-2">
         {isOwner ? (
           <Btn variant="danger" onClick={onDelete}>
+            <TrashIcon size={14} />
             Удалить проект
           </Btn>
         ) : (
