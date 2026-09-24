@@ -24,6 +24,7 @@ import {
   Section,
   StatusPick,
 } from "./fields";
+import { MetricPick } from "./MetricPick";
 
 type Filter = "all" | "open" | "closed";
 const FILTERS: { id: Filter; label: string }[] = [
@@ -209,7 +210,9 @@ function HypothesisCard({
         </div>
       </div>
 
-      <div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div
+        className={`mt-3 grid gap-3 ${ctx.canCycle ? "md:grid-cols-3" : "md:grid-cols-2"}`}
+      >
         <div>
           <Label>Как проверяем</Label>
           <AutoText
@@ -226,6 +229,13 @@ function HypothesisCard({
             placeholder="Например: 6 из 10 назвали проблему сами, 3 готовы платить"
           />
         </div>
+        {ctx.canCycle && (
+          <MetricPick
+            ctx={ctx}
+            value={h.data.metric_id}
+            onChange={(v) => set({ metric_id: v })}
+          />
+        )}
       </div>
 
       <div className="mt-3">

@@ -294,6 +294,18 @@ export function NumField({
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const last = useRef(value ?? 0);
   const ref = useRef<HTMLInputElement>(null);
+  const [focused, setFocused] = useState(false);
+  // вне фокуса показываем с разделителями разрядов: 6 000 000
+  const shown = focused
+    ? v
+    : (() => {
+        const num = parseFloat(v.replace(",", ".").replace(/\s/g, ""));
+        return Number.isFinite(num)
+          ? new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 4 }).format(
+              num,
+            )
+          : v;
+      })();
 
   useEffect(() => {
     if (
@@ -333,15 +345,19 @@ export function NumField({
         ref={ref}
         inputMode="decimal"
         disabled={disabled}
-        value={v}
+        value={shown}
         placeholder={placeholder}
+        onFocus={() => setFocused(true)}
         onChange={(e) => {
           const raw = e.target.value.replace(/[^\d.,\s-]/g, "");
           setV(raw);
           flush(raw);
         }}
-        onBlur={() => flush(v)}
-        className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#aaa]"
+        onBlur={() => {
+          setFocused(false);
+          flush(v);
+        }}
+        className="w-full min-w-0 bg-transparent text-sm tabular-nums outline-none placeholder:text-[#aaa]"
       />
       {suffix && (
         <span className="shrink-0 pl-1 text-xs text-muted">{suffix}</span>

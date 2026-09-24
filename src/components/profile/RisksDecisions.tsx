@@ -22,6 +22,7 @@ import {
   Section,
   StatusPick,
 } from "./fields";
+import { MetricPick } from "./MetricPick";
 
 const RISK_TYPES = [
   { value: "risk", label: "Риск" },
@@ -202,7 +203,9 @@ function DecisionCard({
         />
         <RemoveBtn onClick={() => ctx.askRemove(d.id)} />
       </div>
-      <div className="mt-3 grid gap-3 md:grid-cols-3">
+      <div
+        className={`mt-3 grid gap-3 ${ctx.canCycle ? "md:grid-cols-4" : "md:grid-cols-3"}`}
+      >
         <div>
           <Label>Почему</Label>
           <AutoText
@@ -227,6 +230,13 @@ function DecisionCard({
             onChange={(v) => set({ hypothesis_id: v || null })}
           />
         </div>
+        {ctx.canCycle && (
+          <MetricPick
+            ctx={ctx}
+            value={d.data.metric_id}
+            onChange={(v) => set({ metric_id: v })}
+          />
+        )}
       </div>
     </div>
   );

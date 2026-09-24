@@ -7,6 +7,8 @@ import {
   PROSPECT_TARGET,
   readiness,
   statusOf,
+  northStar,
+  metricProgress,
   type ProfileItem,
 } from "@/lib/profile";
 import { dateRu, parseDate, todayISO } from "@/lib/schedule";
@@ -107,6 +109,15 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
             + Сформулировать миссию
           </button>
         )}
+        {ctx.canCycle && profile.vision?.trim() && (
+          <>
+            <div className="mt-4 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
+              Видение
+            </div>
+            <p className="mt-1 leading-snug text-[#45443e]">{profile.vision}</p>
+          </>
+        )}
+        {ctx.canCycle && <NorthStarLine ctx={ctx} />}
         <div className="mt-5">
           <Positioning ctx={ctx} />
         </div>
@@ -279,5 +290,51 @@ export function Statement({ text }: { text: string }) {
         ),
       )}
     </>
+  );
+}
+
+function NorthStarLine({ ctx }: { ctx: ProfileCtx }) {
+  const m = northStar(ctx.items);
+  if (!m)
+    return (
+      <button
+        onClick={() => ctx.goTo("metrics", "metric")}
+        className="mt-4 block text-sm font-bold text-accent hover:underline"
+      >
+        + Задать главную метрику (North Star)
+      </button>
+    );
+  const pct = metricProgress(m.data);
+  const unit = String(m.data.unit ?? "").trim();
+  const fmt = (v: unknown) =>
+    v === undefined || v === null || v === ""
+      ? "—"
+      : `${+Number(v).toFixed(2)}${unit ? " " + unit : ""}`;
+  return (
+    <button
+      onClick={() => ctx.goTo("metrics", `item-${m.id}`)}
+      className="mt-4 block w-full rounded-[12px] border border-[#e8d9a8] bg-[#fffbef] px-3.5 py-2.5 text-left hover:brightness-[.99]"
+    >
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-[11px] font-extrabold tracking-[.08em] text-[#8a6d00] uppercase">
+          ★ North Star
+        </span>
+        <span className="min-w-0 flex-1 truncate font-bold">
+          {m.title || "Без названия"}
+        </span>
+        <span className="font-extrabold tabular-nums">
+          {fmt(m.data.current)}
+        </span>
+        <span className="text-xs text-muted">цель {fmt(m.data.target)}</span>
+      </div>
+      {pct !== null && (
+        <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae3]">
+          <span
+            className="block h-full rounded-full bg-ok"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+    </button>
   );
 }

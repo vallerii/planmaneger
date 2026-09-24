@@ -37,6 +37,7 @@ export default async function ProfilePage({
     phasesRes,
     econProbe,
     stepsRes,
+    cycleProbe,
   ] = await Promise.all([
     supabase
       .from("product_profiles")
@@ -73,6 +74,8 @@ export default async function ProfilePage({
       .select("id,profile_step,status,progress")
       .eq("project_id", id)
       .not("profile_step", "is", null),
+    // есть ли колонки полного цикла (миграция 0007)
+    supabase.from("product_profiles").select("vision").limit(1),
   ]);
 
   const missingTables =
@@ -95,6 +98,7 @@ export default async function ProfilePage({
       missingTables={missingTables}
       needsMarket={needsMarket}
       needsEconomics={needsEconomics}
+      needsCycle={!missingTables && !!cycleProbe.error}
       stepTasks={(stepsRes.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}
       phases={(phasesRes.data ?? []) as { id: string; name: string }[]}

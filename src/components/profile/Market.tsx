@@ -10,6 +10,7 @@ import {
   type ProfileItem,
 } from "@/lib/profile";
 import type { ProfileCtx } from "./ProfileApp";
+import MarketSize from "./MarketSize";
 import {
   AddBtn,
   AutoText,
@@ -142,6 +143,8 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
           + Добавить конкурента
         </AddBtn>
       </Section>
+
+      {ctx.canCycle && <MarketSize ctx={ctx} />}
 
       {/* ВЫВОДЫ */}
       <Section

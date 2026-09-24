@@ -6,7 +6,13 @@ import type { ProductProfile, ProfileItem, Tab } from "./profile";
 import type { Size } from "./types";
 
 export type ProfileStep =
-  "foundation" | "hypotheses" | "market" | "economics" | "risks";
+  | "foundation"
+  | "hypotheses"
+  | "market"
+  | "gtm"
+  | "economics"
+  | "metrics"
+  | "risks";
 
 export type CheckItem = { label: string; done: boolean; tab: Tab; sec: string };
 
@@ -44,12 +50,28 @@ export const STEPS: {
       "Чем клиенты решают проблему сегодня и кто конкретно может стать первым клиентом. Запишите главные выводы.",
   },
   {
+    step: "gtm",
+    tab: "gtm",
+    name: "Спланировать выход на рынок",
+    size: "M",
+    about:
+      "Как клиент нас находит и остаётся: путь клиента, каналы привлечения, откуда возьмём первых 100 клиентов и как запускаемся.",
+  },
+  {
     step: "economics",
     tab: "economics",
     name: "Посчитать экономику",
     size: "M",
     about:
       "Что продаём, по какой цене и сходится ли модель: продажи в месяц и постоянные расходы.",
+  },
+  {
+    step: "metrics",
+    tab: "metrics",
+    name: "Определить метрики успеха",
+    size: "S",
+    about:
+      "Одна главная метрика (North Star) и несколько метрик под ней — с целью и текущим значением. По ним видно, работает ли продукт.",
   },
   {
     step: "risks",
@@ -79,6 +101,12 @@ export function stepChecklist(
           done: has(profile.mission),
           tab: "foundation",
           sec: "mission",
+        },
+        {
+          label: "Видение",
+          done: has(profile.vision),
+          tab: "foundation",
+          sec: "mission:vision",
         },
         {
           label: "Тезис: основной",
@@ -168,12 +196,79 @@ export function stepChecklist(
           sec: "prospect",
         },
         {
+          label: "Размер рынка: TAM, SAM и SOM",
+          done: (["tam", "sam", "som"] as const).every(
+            (k) => n(profile.market_size?.[k]?.value) > 0,
+          ),
+          tab: "market",
+          sec: "market_size",
+        },
+        {
           label: "Выводы из анализа рынка",
           done: has(profile.market_notes),
           tab: "market",
           sec: "market",
         },
       ];
+    case "gtm": {
+      const g = profile.gtm ?? {};
+      return [
+        {
+          label: "Хотя бы один этап пути клиента",
+          done: any("journey").length > 0,
+          tab: "gtm",
+          sec: "journey",
+        },
+        {
+          label: "Хотя бы один канал привлечения",
+          done: any("channel").length > 0,
+          tab: "gtm",
+          sec: "channel",
+        },
+        {
+          label: "Откуда возьмём первых 100 клиентов",
+          done: has(g.first100),
+          tab: "gtm",
+          sec: "gtm",
+        },
+        {
+          label: "План запуска",
+          done: has(g.launch_plan),
+          tab: "gtm",
+          sec: "gtm",
+        },
+      ];
+    }
+    case "metrics": {
+      const ms = any("metric");
+      const ns = ms.find((m) => m.data.level === "north");
+      return [
+        {
+          label: "Главная метрика (North Star)",
+          done: !!ns,
+          tab: "metrics",
+          sec: "metric",
+        },
+        {
+          label: "Цель для главной метрики",
+          done: !!ns && n(ns.data.target) !== 0,
+          tab: "metrics",
+          sec: "metric",
+        },
+        {
+          label: "Хотя бы одна метрика под главной",
+          done: ms.some((m) => m.data.level !== "north"),
+          tab: "metrics",
+          sec: "metric",
+        },
+        {
+          label: "Первый замер",
+          done: ms.some((m) => !!m.data.measured_at),
+          tab: "metrics",
+          sec: "metric",
+        },
+      ];
+    }
     case "economics": {
       const e = profile.economics ?? {};
       return [

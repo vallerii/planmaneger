@@ -26,6 +26,8 @@ import Hypotheses from "./Hypotheses";
 import RisksDecisions from "./RisksDecisions";
 import Market from "./Market";
 import EconomicsTab from "./Economics";
+import GtmTab from "./Gtm";
+import MetricsTab from "./Metrics";
 import type { Economics } from "@/lib/economics";
 
 const TABS: { id: Tab; label: string }[] = [
@@ -33,7 +35,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "foundation", label: "Основа" },
   { id: "hypotheses", label: "Гипотезы" },
   { id: "market", label: "Рынок" },
+  { id: "gtm", label: "Выход на рынок" },
   { id: "economics", label: "Экономика" },
+  { id: "metrics", label: "Метрики" },
   { id: "risks", label: "Риски и решения" },
 ];
 
@@ -41,6 +45,7 @@ const TABS: { id: Tab; label: string }[] = [
 export type ItemPatch = {
   title?: string;
   status?: string;
+  position?: number;
   data?: Record<string, any>;
 };
 /* eslint-enable @typescript-eslint/no-explicit-any */
@@ -57,7 +62,12 @@ export type ProfileCtx = {
   ) => void;
   patchPositioning: (patch: Partial<ProductProfile["positioning"]>) => void;
   patchThesis: (patch: Partial<ProductProfile["thesis"]>) => void;
-  addItem: (kind: ItemKind, data?: ProfileItem["data"]) => void;
+  addItem: (
+    kind: ItemKind,
+    data?: ProfileItem["data"],
+    title?: string,
+    opts?: { focus?: boolean },
+  ) => Promise<void>;
   updateItem: (id: string, patch: ItemPatch) => void;
   askRemove: (id: string) => void;
   markReviewed: (sec: SectionId) => void;
@@ -68,6 +78,8 @@ export type ProfileCtx = {
   setFocus: (f: string | null) => void;
   patchEconomics: (patch: Partial<Economics>) => void;
   canEconomics: boolean;
+  /** миграция 0007: метрики, каналы, путь клиента, видение, размер рынка, GTM */
+  canCycle: boolean;
   projectId: string;
   phases: { id: string; name: string }[];
   tasks: LinkedTask[];
@@ -98,6 +110,7 @@ export default function ProfileApp({
   missingTables,
   needsMarket = false,
   needsEconomics = false,
+  needsCycle = false,
   initialTasks = [],
   phases = [],
   stepTasks: initialStepTasks = [],
@@ -111,6 +124,7 @@ export default function ProfileApp({
   missingTables: boolean;
   needsMarket?: boolean;
   needsEconomics?: boolean;
+  needsCycle?: boolean;
   initialTasks?: LinkedTask[];
   phases?: { id: string; name: string }[];
   stepTasks?: StepTask[];
@@ -137,6 +151,8 @@ export default function ProfileApp({
   // несохранённые изменения: профиль целиком + изменённые записи
   const dirtyProfile = useRef(false);
   const dirtyItems = useRef(new Set<string>());
+  // какие «необязательные» колонки профиля меняли (появились в миграциях 0004+)
+  const dirtyCols = useRef(new Set<string>());
   const [dirtyCount, setDirtyCount] = useState(0);
   const markDirty = useCallback(() => {
     setDirtyCount((dirtyProfile.current ? 1 : 0) + dirtyItems.current.size);
@@ -187,6 +203,7 @@ export default function ProfileApp({
       profileRef.current = next;
       setProfile(next);
       // запишется по кнопке «Сохранить»
+      Object.keys(patch).forEach((k) => dirtyCols.current.add(k));
       dirtyProfile.current = true;
       markDirty();
     },
@@ -250,7 +267,12 @@ export default function ProfileApp({
 
   // ---------- записи ----------
   const addItem = useCallback(
-    async (kind: ItemKind, data: ProfileItem["data"] = {}) => {
+    async (
+      kind: ItemKind,
+      data: ProfileItem["data"] = {},
+      title = "",
+      opts: { focus?: boolean } = {},
+    ) => {
       const same = itemsRef.current.filter((i) => i.kind === kind);
       const position = same.length
         ? Math.max(...same.map((i) => i.position)) + 1
@@ -261,7 +283,7 @@ export default function ProfileApp({
         .insert({
           project_id: project.id,
           kind,
-          title: "",
+          title,
           status: DEFAULT_STATUS[kind],
           data,
           position,
@@ -272,6 +294,7 @@ export default function ProfileApp({
       if (error) return toast("Ошибка: " + error.message);
       setItems((xs) => [...xs, row as ProfileItem]);
       reloadHistory();
+      if (opts.focus === false) return;
       // фокус на новом элементе
       setTimeout(() => {
         const el = document.querySelector<HTMLTextAreaElement>(
@@ -291,6 +314,7 @@ export default function ProfileApp({
       const dbPatch: Record<string, unknown> = {};
       if (patch.title !== undefined) dbPatch.title = patch.title;
       if (patch.status !== undefined) dbPatch.status = patch.status;
+      if (patch.position !== undefined) dbPatch.position = patch.position;
       if (patch.data) dbPatch.data = { ...cur.data, ...patch.data };
       const now = new Date().toISOString();
       setItems((xs) =>
@@ -354,9 +378,14 @@ export default function ProfileApp({
         updated_at: new Date().toISOString(),
       };
       // колонки из миграций 0004/0005 — отправляем, только когда они нужны
-      if (next.market_notes) row.market_notes = next.market_notes;
-      if (Object.keys(next.economics ?? {}).length)
-        row.economics = next.economics;
+      for (const col of [
+        "market_notes",
+        "economics",
+        "vision",
+        "market_size",
+        "gtm",
+      ] as const)
+        if (dirtyCols.current.has(col)) row[col] = next[col];
       jobs.push({
         kind: "profile",
         p: supabase.from("product_profiles").upsert(row),
@@ -370,7 +399,12 @@ export default function ProfileApp({
         id,
         p: supabase
           .from("profile_items")
-          .update({ title: it.title, status: it.status, data: it.data })
+          .update({
+            title: it.title,
+            status: it.status,
+            data: it.data,
+            position: it.position,
+          })
           .eq("id", id),
       });
     }
@@ -384,6 +418,7 @@ export default function ProfileApp({
       }
       if (j.kind === "profile") {
         dirtyProfile.current = false;
+        dirtyCols.current.clear();
         existsRef.current = true;
       } else if (j.id) dirtyItems.current.delete(j.id);
     });
@@ -598,6 +633,7 @@ export default function ProfileApp({
     setFocus,
     patchEconomics,
     canEconomics: !needsEconomics,
+    canCycle: !needsCycle,
     projectId: project.id,
     phases,
     tasks,
@@ -681,9 +717,18 @@ export default function ProfileApp({
             Editor, затем обновите страницу.
           </div>
         )}
+        {needsCycle && !missingTables && (
+          <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
+            Для метрик, выхода на рынок, видения и размера рынка запустите{" "}
+            <b>supabase/migrations/0007_product_cycle.sql</b> в Supabase → SQL
+            Editor, затем обновите страницу.
+          </div>
+        )}
         {tab === "hypotheses" && <Hypotheses ctx={ctx} />}
         {tab === "market" && <Market ctx={ctx} />}
+        {tab === "gtm" && <GtmTab ctx={ctx} />}
         {tab === "economics" && <EconomicsTab ctx={ctx} />}
+        {tab === "metrics" && <MetricsTab ctx={ctx} />}
         {tab === "risks" && <RisksDecisions ctx={ctx} />}
       </main>
 

@@ -9,7 +9,10 @@ export type ItemKind =
   | "decision"
   | "competitor"
   | "prospect"
-  | "product";
+  | "product"
+  | "metric"
+  | "channel"
+  | "journey";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type ProfileItem = {
@@ -44,9 +47,26 @@ export type Thesis = {
   value?: string;
 };
 
+/** TAM / SAM / SOM: значение (в валюте экономики) и как посчитали. */
+export type MarketSize = Partial<
+  Record<"tam" | "sam" | "som", { value?: number; calc?: string }>
+>;
+
+/** Выход на рынок. */
+export type Gtm = {
+  clients_now?: number;
+  first100?: string;
+  launch_date?: string;
+  launch_type?: string;
+  launch_plan?: string;
+};
+
 export type ProductProfile = {
   project_id: string;
   mission: string;
+  vision: string;
+  market_size: MarketSize;
+  gtm: Gtm;
   market_notes: string;
   economics: Economics;
   positioning: Positioning;
@@ -72,6 +92,9 @@ export type HistoryEntry = {
 export const emptyProfile = (projectId: string): ProductProfile => ({
   project_id: projectId,
   mission: "",
+  vision: "",
+  market_size: {},
+  gtm: {},
   market_notes: "",
   economics: {},
   positioning: {},
@@ -139,6 +162,18 @@ export const STATUS: Record<ItemKind, Opt[]> = {
     { value: "selling", label: "Продаём", tone: "green" },
     { value: "dropped", label: "Отказались", tone: "red" },
   ],
+  metric: [
+    { value: "active", label: "Отслеживаем", tone: "blue" },
+    { value: "achieved", label: "Цель достигнута", tone: "green" },
+    { value: "paused", label: "На паузе", tone: "gray" },
+  ],
+  channel: [
+    { value: "idea", label: "Идея", tone: "gray" },
+    { value: "testing", label: "Тестируем", tone: "blue" },
+    { value: "works", label: "Работает", tone: "green" },
+    { value: "failed", label: "Не работает", tone: "red" },
+  ],
+  journey: [{ value: "stage", label: "Этап", tone: "gray" }],
 };
 
 export const statusOf = (kind: ItemKind, value: string) =>
@@ -171,6 +206,9 @@ export const KIND_LABEL: Record<ItemKind, string> = {
   competitor: "Конкурент",
   prospect: "Потенциальный клиент",
   product: "Продукт",
+  metric: "Метрика",
+  channel: "Канал",
+  journey: "Этап пути клиента",
 };
 
 export const DEFAULT_STATUS: Record<ItemKind, string> = {
@@ -182,13 +220,30 @@ export const DEFAULT_STATUS: Record<ItemKind, string> = {
   competitor: "shallow",
   prospect: "new",
   product: "idea",
+  metric: "active",
+  channel: "idea",
+  journey: "stage",
 };
 
 // ---------- разделы и свежесть ----------
 export type Tab =
-  "overview" | "foundation" | "hypotheses" | "market" | "economics" | "risks";
+  | "overview"
+  | "foundation"
+  | "hypotheses"
+  | "market"
+  | "gtm"
+  | "economics"
+  | "metrics"
+  | "risks";
 export type SectionId =
-  "mission" | "positioning" | "thesis" | "market" | "plan" | ItemKind;
+  | "mission"
+  | "positioning"
+  | "thesis"
+  | "market"
+  | "plan"
+  | "market_size"
+  | "gtm"
+  | ItemKind;
 
 export const SECTIONS: { id: SectionId; label: string; tab: Tab }[] = [
   { id: "mission", label: "Миссия", tab: "foundation" },
@@ -198,9 +253,14 @@ export const SECTIONS: { id: SectionId; label: string; tab: Tab }[] = [
   { id: "hypothesis", label: "Гипотезы", tab: "hypotheses" },
   { id: "competitor", label: "Конкуренты", tab: "market" },
   { id: "prospect", label: "10 потенциальных клиентов", tab: "market" },
+  { id: "market_size", label: "Размер рынка", tab: "market" },
   { id: "market", label: "Выводы из анализа рынка", tab: "market" },
+  { id: "journey", label: "Путь клиента", tab: "gtm" },
+  { id: "channel", label: "Каналы привлечения", tab: "gtm" },
+  { id: "gtm", label: "Первые 100 клиентов и запуск", tab: "gtm" },
   { id: "product", label: "Продукты и юнит-экономика", tab: "economics" },
   { id: "plan", label: "Финансовый план", tab: "economics" },
+  { id: "metric", label: "Метрики успеха", tab: "metrics" },
   { id: "risk", label: "Риски и открытые вопросы", tab: "risks" },
   { id: "decision", label: "Принятые решения", tab: "risks" },
 ];
@@ -224,7 +284,9 @@ export function sectionTouched(
     sec === "positioning" ||
     sec === "thesis" ||
     sec === "market" ||
-    sec === "plan"
+    sec === "plan" ||
+    sec === "market_size" ||
+    sec === "gtm"
   ) {
     if (profile.updated[sec]) dates.push(profile.updated[sec]);
   } else {
@@ -247,6 +309,14 @@ export function isFilled(
   if (sec === "thesis") return !!profile.thesis.main?.trim();
   if (sec === "market") return !!profile.market_notes?.trim();
   if (sec === "plan") return (profile.economics?.base_sales ?? 0) > 0;
+  if (sec === "market_size")
+    return ["tam", "sam", "som"].some(
+      (k) => (profile.market_size?.[k as "tam"]?.value ?? 0) > 0,
+    );
+  if (sec === "gtm") {
+    const g = profile.gtm ?? {};
+    return !!(g.first100?.trim() || g.launch_plan?.trim());
+  }
   return items.some((i) => i.kind === sec);
 }
 
@@ -453,7 +523,13 @@ export const PROSPECT_RESEARCHED = [
 ];
 
 export type ProfileSection =
-  "mission" | "positioning" | "thesis" | "market" | "plan";
+  | "mission"
+  | "positioning"
+  | "thesis"
+  | "market"
+  | "plan"
+  | "market_size"
+  | "gtm";
 
 /** Задача с доски, привязанная к гипотезе. */
 export type LinkedTask = {
@@ -463,3 +539,18 @@ export type LinkedTask = {
   phase_id: string;
   hypothesis_id: string | null;
 };
+
+/** Главная метрика (North Star) — одна на проект. */
+export const northStar = (items: ProfileItem[]) =>
+  items.find((i) => i.kind === "metric" && i.data.level === "north") ?? null;
+
+/** Прогресс метрики к цели, 0–100 (учитывает «чем меньше, тем лучше»). */
+export function metricProgress(d: Record<string, unknown>) {
+  const cur = Number(d.current);
+  const target = Number(d.target);
+  const base = Number(d.baseline ?? 0);
+  if (!Number.isFinite(cur) || !Number.isFinite(target) || target === base)
+    return null;
+  const p = ((cur - base) / (target - base)) * 100;
+  return Math.max(0, Math.min(100, Math.round(p)));
+}

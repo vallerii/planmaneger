@@ -53,8 +53,8 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
   // переход из позиционирования: «thesis:advantage», «thesis:category», …
   const { focus, setFocus } = ctx;
   useEffect(() => {
-    if (!focus?.startsWith("thesis:")) return;
-    const key = focus.slice(7);
+    if (!focus?.includes(":")) return;
+    const key = focus.split(":")[1];
     const t = setTimeout(() => {
       const tabKey = THESIS_TABS.find((x) => x.key === key)?.key;
       if (tabKey) setThesisTab(tabKey);
@@ -70,11 +70,11 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* МИССИЯ */}
+      {/* МИССИЯ И ВИДЕНИЕ */}
       <Section
         id="mission"
-        title="Миссия"
-        desc="Зачем существует продукт и что он меняет для клиентов в долгую. Одна-две фразы, меняется редко."
+        title={ctx.canCycle ? "Миссия и видение" : "Миссия"}
+        desc="Миссия — зачем существует продукт. Видение — каким станет мир (или рынок), когда у нас получится. Меняются редко."
         fresh={freshness("mission", profile, items)}
         onReviewed={() => ctx.markReviewed("mission")}
       >
@@ -84,10 +84,16 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
           placeholder="Например: помогаем локальному бизнесу видеть и управлять тем, как их находят и оценивают в интернете."
           className="text-lg font-bold"
         />
-        <p className="mt-2 text-xs text-muted">
-          Миссия показывается вверху доски задач — чтобы команда не теряла
-          фокус.
-        </p>
+        {ctx.canCycle && (
+          <div className="mt-4" data-focus="vision">
+            <Label hint="через 3–5 лет">Видение</Label>
+            <AutoText
+              value={profile.vision ?? ""}
+              onSave={(v) => ctx.saveProfile({ vision: v }, "mission")}
+              placeholder="Например: любой локальный бизнес знает, почему клиенты выбирают или не выбирают его, и может это исправить за день."
+            />
+          </div>
+        )}
       </Section>
 
       {/* ТЕЗИС */}
@@ -249,6 +255,34 @@ function ProblemCard({
           onChange={(v) => ctx.updateItem(p.id, { status: v })}
         />
         <RemoveBtn onClick={() => ctx.askRemove(p.id)} />
+      </div>
+      <div className="mt-3">
+        <Label hint="Jobs to be Done">Работа клиента</Label>
+        <div className="grid gap-2 md:grid-cols-3">
+          {(
+            [
+              ["jtbd_when", "Когда…", "открываю карты и вижу 3 новых отзыва"],
+              ["jtbd_want", "я хочу…", "быстро ответить каждому"],
+              [
+                "jtbd_so",
+                "чтобы…",
+                "новые клиенты видели, что нам не всё равно",
+              ],
+            ] as const
+          ).map(([k, lbl, ph]) => (
+            <div key={k} className="flex items-start gap-1.5">
+              <span className="mt-2 w-14 shrink-0 text-xs font-bold text-muted">
+                {lbl}
+              </span>
+              <AutoText
+                value={p.data[k] ?? ""}
+                onSave={(v) => ctx.updateItem(p.id, { data: { [k]: v } })}
+                placeholder={ph}
+                rows={1}
+              />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div>
