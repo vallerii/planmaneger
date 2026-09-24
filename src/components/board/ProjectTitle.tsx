@@ -15,10 +15,13 @@ export default function ProjectTitle({
   projectId,
   name,
   onRename,
+  onBeforeNavigate,
 }: {
   projectId: string;
   name: string;
   onRename: (name: string) => void;
+  /** вернуть false, чтобы отменить переход (например, есть несохранённое) */
+  onBeforeNavigate?: (href: string) => boolean;
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -181,7 +184,9 @@ export default function ProjectTitle({
                     key={p.id}
                     onClick={() => {
                       setOpen(false);
-                      if (!current) router.push(`/projects/${p.id}`);
+                      const href = `/projects/${p.id}`;
+                      if (!current && (onBeforeNavigate?.(href) ?? true))
+                        router.push(href);
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-[#f3f2ed] ${
                       current ? "font-extrabold" : "font-semibold"

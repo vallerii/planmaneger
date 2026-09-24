@@ -56,7 +56,8 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
     if (!focus?.startsWith("thesis:")) return;
     const key = focus.slice(7);
     const t = setTimeout(() => {
-      if (key === "advantage") setThesisTab("advantage");
+      const tabKey = THESIS_TABS.find((x) => x.key === key)?.key;
+      if (tabKey) setThesisTab(tabKey);
       setTimeout(() => {
         document
           .querySelector<HTMLTextAreaElement>(`[data-focus="${key}"] textarea`)

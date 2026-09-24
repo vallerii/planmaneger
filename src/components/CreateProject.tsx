@@ -3,18 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Btn, Field, Modal, Stepper, inputCls } from "./ui";
+import { Btn, Field, Modal, inputCls } from "./ui";
+import { PHASE0_NAME, STEPS, stepDescription } from "@/lib/steps";
 import { todayISO } from "@/lib/schedule";
-
-const MAX_PHASES = 20;
-const defaultName = (i: number) => `Фаза ${i + 1}`;
 
 export default function CreateProject() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [start, setStart] = useState(todayISO());
-  const [count, setCount] = useState(3);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,16 +35,35 @@ export default function CreateProject() {
       return setError(error?.message ?? "Ошибка");
     }
 
-    const { error: phErr } = await supabase.from("phases").insert(
-      Array.from({ length: count }, (_, i) => ({
-        project_id: project.id,
-        name: defaultName(i),
-        position: i,
-      })),
-    );
-    if (phErr) {
+    // Фаза 0: задачи на заполнение профиля продукта
+    const { data: phase, error: phErr } = await supabase
+      .from("phases")
+      .insert({ project_id: project.id, name: PHASE0_NAME, position: 0 })
+      .select("id")
+      .single();
+    if (phErr || !phase) {
       setBusy(false);
-      return setError(phErr.message);
+      return setError(phErr?.message ?? "Ошибка");
+    }
+    const rows = STEPS.map((s, i) => ({
+      project_id: project.id,
+      phase_id: phase.id,
+      name: s.name,
+      size: s.size,
+      description: stepDescription(s.step, project.id),
+      position: i,
+      profile_step: s.step,
+    }));
+    let { error: tErr } = await supabase.from("tasks").insert(rows);
+    // миграция 0006 ещё не применена — создаём задачи без связи с профилем
+    if (tErr && /profile_step/.test(tErr.message)) {
+      ({ error: tErr } = await supabase
+        .from("tasks")
+        .insert(rows.map(({ profile_step: _s, ...r }) => (void _s, r))));
+    }
+    if (tErr) {
+      setBusy(false);
+      return setError(tErr.message);
     }
     router.push(`/projects/${project.id}`);
   }
@@ -78,22 +94,11 @@ export default function CreateProject() {
           />
         </Field>
 
-        <div className="my-3">
-          <span className="mb-1.5 block text-xs font-bold text-muted">
-            На сколько фаз разбить проект
-          </span>
-          <div className="flex items-center gap-3">
-            <Stepper
-              value={count}
-              onChange={setCount}
-              min={1}
-              max={MAX_PHASES}
-            />
-            <span className="text-sm text-muted">
-              {count} {plural(count, "фаза", "фазы", "фаз")}
-            </span>
-          </div>
-        </div>
+        <p className="mb-1 text-sm text-muted">
+          Проект начнётся с фазы «{PHASE0_NAME}»: задачи по заполнению профиля
+          продукта. Остальные фазы добавите на доске, когда будет понятно, что
+          делать.
+        </p>
 
         {error && <p className="text-sm text-bad">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
@@ -109,12 +114,4 @@ export default function CreateProject() {
       </Modal>
     </>
   );
-}
-
-function plural(n: number, one: string, few: string, many: string) {
-  const m10 = n % 10,
-    m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
-  return many;
 }

@@ -21,6 +21,18 @@ import {
   workdaysLabel,
 } from "@/lib/schedule";
 import Link from "next/link";
+import {
+  stepChecklist,
+  stepHref,
+  stepProgress,
+  type CheckItem,
+  type ProfileStep,
+} from "@/lib/steps";
+import {
+  emptyProfile,
+  type ProductProfile,
+  type ProfileItem,
+} from "@/lib/profile";
 import { Btn, Select, TrashIcon, trashBtnCls } from "../ui";
 import RichEditor from "./RichEditor";
 import ShareDialog, { LinkIcon } from "./ShareDialog";
@@ -232,7 +244,50 @@ export default function TaskDrawer({
       onUpdate({ progress, status: "in_progress" });
     else onUpdate({ progress });
   };
+  // задача фазы 0: прогресс считается из заполненности профиля
+  const step = (isCreate ? null : task.profile_step) as ProfileStep | null;
+  const [check, setCheck] = useState<CheckItem[] | null>(null);
+  useEffect(() => {
+    if (!step) return;
+    let alive = true;
+    (async () => {
+      try {
+        const [pr, it] = await Promise.all([
+          supabase
+            .from("product_profiles")
+            .select("*")
+            .eq("project_id", task.project_id)
+            .maybeSingle(),
+          supabase
+            .from("profile_items")
+            .select("*")
+            .eq("project_id", task.project_id),
+        ]);
+        if (!alive) return;
+        const profile: ProductProfile = {
+          ...emptyProfile(task.project_id),
+          ...((pr.data as Partial<ProductProfile>) ?? {}),
+        };
+        setCheck(
+          stepChecklist(step, profile, (it.data ?? []) as ProfileItem[]),
+        );
+      } catch {
+        if (alive) setCheck([]);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [step, supabase, task.project_id]);
+  const stepPct = check ? stepProgress(check) : task.progress;
+
   const setStatus = (status: Status) => {
+    if (step) {
+      // закрыли — 100%, открыли снова — прогресс по профилю
+      if (status === "done") onUpdate({ status, progress: 100 });
+      else onUpdate({ status, progress: stepPct });
+      return;
+    }
     if (status === "done") onUpdate({ status, progress: 100 });
     else if (task.status === "done" && task.progress === 100)
       onUpdate({ status, progress: status === "todo" ? 0 : 90 });
@@ -338,29 +393,51 @@ export default function TaskDrawer({
                 }))}
               />
             </div>
-            <div className={card}>
-              <label className={lbl}>Прогресс</label>
-              <div className="grid grid-cols-[1fr_64px] items-center gap-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={task.progress}
-                  onChange={(e) => setProgress(+e.target.value)}
-                  className="accent-ok"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={task.progress}
-                  onChange={(e) => setProgress(+e.target.value)}
-                  className={inp}
-                />
+            {step ? (
+              <div className={card}>
+                <label className={lbl}>Прогресс · из профиля</label>
+                <div className="flex items-center gap-2">
+                  <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#eceae3]">
+                    <span
+                      className="block h-full rounded-full bg-ok"
+                      style={{ width: `${task.progress}%` }}
+                    />
+                  </div>
+                  <span className="w-10 text-right text-sm font-extrabold">
+                    {task.progress}%
+                  </span>
+                </div>
+                <div className="mt-1 text-[11px] text-muted">
+                  {task.status === "done"
+                    ? "Задача закрыта вручную"
+                    : "До 99% — закройте статусом «Готово», когда решите"}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className={card}>
+                <label className={lbl}>Прогресс</label>
+                <div className="grid grid-cols-[1fr_64px] items-center gap-2">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={task.progress}
+                    onChange={(e) => setProgress(+e.target.value)}
+                    className="accent-ok"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={task.progress}
+                    onChange={(e) => setProgress(+e.target.value)}
+                    className={inp}
+                  />
+                </div>
+              </div>
+            )}
             <div className={card}>
               <label className={lbl}>Осталось работы</label>
               <div className="text-xl font-extrabold tracking-tight">
@@ -384,6 +461,63 @@ export default function TaskDrawer({
               <label className={lbl}>Успеваем к дедлайну?</label>
               <DeadlineHint task={task} sizeDays={sizeDays} />
             </div>
+            {step && (
+              <div className={card + " sm:col-span-2"}>
+                <div className="flex items-baseline gap-2">
+                  <label className={lbl}>Что заполнено в профиле</label>
+                  {check && (
+                    <span className="ml-auto text-[11px] font-bold text-muted">
+                      {check.filter((c) => c.done).length} из {check.length}
+                    </span>
+                  )}
+                </div>
+                {!check ? (
+                  <div className="text-sm text-muted">Загрузка…</div>
+                ) : check.length === 0 ? (
+                  <div className="text-sm text-muted">
+                    Не удалось загрузить профиль.
+                  </div>
+                ) : (
+                  <ul className="flex flex-col gap-0.5">
+                    {check.map((c) => (
+                      <li key={c.label}>
+                        <Link
+                          href={stepHref(task.project_id, c)}
+                          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[#f5f4ef]"
+                        >
+                          <span
+                            className={`grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] font-black ${
+                              c.done
+                                ? "bg-ok text-white"
+                                : "border border-[#c9c6bb] text-transparent"
+                            }`}
+                          >
+                            ✓
+                          </span>
+                          <span
+                            className={c.done ? "text-muted" : "font-semibold"}
+                          >
+                            {c.label}
+                          </span>
+                          {!c.done && (
+                            <span className="ml-auto text-xs font-bold text-muted">
+                              заполнить →
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {check &&
+                  task.status === "done" &&
+                  check.some((c) => !c.done) && (
+                    <p className="mt-1.5 text-xs text-[#6b4c00]">
+                      Задача закрыта, но в профиле есть пустые пункты.
+                    </p>
+                  )}
+              </div>
+            )}
             {hypotheses && (
               <div className={card + " sm:col-span-2"}>
                 <div className="flex items-baseline gap-2">

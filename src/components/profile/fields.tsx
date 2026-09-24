@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Select, TrashIcon, trashBtnCls } from "../ui";
 import { TONE, freshnessLabel, type Freshness, type Tone } from "@/lib/profile";
 
-/** Текстовое поле с автосохранением (через 600 мс после ввода и при уходе с поля). */
+/** Текстовое поле: изменения сразу уходят в состояние профиля, в базу — по кнопке «Сохранить». */
 export function AutoText({
   value,
   onSave,
@@ -67,8 +67,7 @@ export function AutoText({
           ? e.target.value.replace(/\n/g, " ")
           : e.target.value;
         setV(val);
-        if (timer.current) clearTimeout(timer.current);
-        timer.current = setTimeout(() => flush(val), 600);
+        flush(val);
       }}
       onBlur={() => flush(v)}
       onKeyDown={(e) => {
@@ -277,7 +276,7 @@ export function Empty({ children }: { children: ReactNode }) {
   );
 }
 
-/** Числовое поле с автосохранением (через 600 мс и при уходе с поля). */
+/** Числовое поле: как AutoText, в базу — по кнопке «Сохранить». */
 export function NumField({
   value,
   onSave,
@@ -339,8 +338,7 @@ export function NumField({
         onChange={(e) => {
           const raw = e.target.value.replace(/[^\d.,\s-]/g, "");
           setV(raw);
-          if (timer.current) clearTimeout(timer.current);
-          timer.current = setTimeout(() => flush(raw), 600);
+          flush(raw);
         }}
         onBlur={() => flush(v)}
         className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-[#aaa]"

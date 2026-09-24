@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { Brand, ConfirmDialog, Toast } from "../ui";
+import { Brand, Btn, ConfirmDialog, Modal, Toast } from "../ui";
+import { useRouter } from "next/navigation";
+import { stepChecklist, stepProgress, type ProfileStep } from "@/lib/steps";
 import ProjectTitle from "../board/ProjectTitle";
 import ProjectNav from "../ProjectNav";
 import {
@@ -78,6 +80,14 @@ export type ProfileCtx = {
   ) => Promise<boolean>;
 };
 
+/** Задача фазы 0, связанная с вкладкой профиля. */
+export type StepTask = {
+  id: string;
+  profile_step: ProfileStep;
+  status: string;
+  progress: number;
+};
+
 export default function ProfileApp({
   project,
   initialProfile,
@@ -90,6 +100,7 @@ export default function ProfileApp({
   needsEconomics = false,
   initialTasks = [],
   phases = [],
+  stepTasks: initialStepTasks = [],
 }: {
   project: { id: string; name: string };
   initialProfile: ProductProfile;
@@ -102,8 +113,10 @@ export default function ProfileApp({
   needsEconomics?: boolean;
   initialTasks?: LinkedTask[];
   phases?: { id: string; name: string }[];
+  stepTasks?: StepTask[];
 }) {
   const supabase = useMemo(() => createClient(), []);
+  const router = useRouter();
   const [name, setName] = useState(project.name);
   const [tab, setTab] = useState<Tab>(
     TABS.some((t) => t.id === initialTab) ? (initialTab as Tab) : "overview",
@@ -121,6 +134,17 @@ export default function ProfileApp({
   const [history, setHistory] = useState(initialHistory);
   const [tasks, setTasks] = useState(initialTasks);
   const [pending, setPending] = useState(0);
+  // несохранённые изменения: профиль целиком + изменённые записи
+  const dirtyProfile = useRef(false);
+  const dirtyItems = useRef(new Set<string>());
+  const [dirtyCount, setDirtyCount] = useState(0);
+  const markDirty = useCallback(() => {
+    setDirtyCount((dirtyProfile.current ? 1 : 0) + dirtyItems.current.size);
+  }, []);
+  const [saving, setSaving] = useState(false);
+  const [leaveTo, setLeaveTo] = useState<string | null>(null);
+  const [, setStepTasks] = useState(initialStepTasks);
+  const stepTasksRef = useRef(initialStepTasks);
   const [toastText, setToastText] = useState<string | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
 
@@ -162,23 +186,25 @@ export default function ProfileApp({
       };
       profileRef.current = next;
       setProfile(next);
-      const row: Record<string, unknown> = {
-        project_id: project.id,
-        mission: next.mission,
-        positioning: next.positioning,
-        thesis: next.thesis,
-        next_review: next.next_review,
-        reviewed: next.reviewed,
-        updated: next.updated,
-        updated_at: now,
-      };
-      // колонка из миграции 0004 — отправляем, только когда она нужна
-      if ("market_notes" in patch || next.market_notes)
-        row.market_notes = next.market_notes;
-      if ("economics" in patch || Object.keys(next.economics ?? {}).length)
-        row.economics = next.economics;
+      // запишется по кнопке «Сохранить»
+      dirtyProfile.current = true;
+      markDirty();
+    },
+    [markDirty],
+  );
+
+  /** Сразу записать отдельные колонки профиля (без кнопки «Сохранить»). */
+  const writeProfileNow = useCallback(
+    (cols: Partial<ProductProfile>) => {
+      const next = { ...profileRef.current, ...cols };
+      profileRef.current = next;
+      setProfile(next);
       existsRef.current = true;
-      track(supabase.from("product_profiles").upsert(row));
+      return track(
+        supabase
+          .from("product_profiles")
+          .upsert({ project_id: project.id, ...cols }),
+      );
     },
     [supabase, project.id, track],
   );
@@ -211,7 +237,7 @@ export default function ProfileApp({
 
   const markReviewed = useCallback(
     (sec: SectionId) => {
-      saveProfile({
+      writeProfileNow({
         reviewed: {
           ...profileRef.current.reviewed,
           [sec]: new Date().toISOString(),
@@ -219,7 +245,7 @@ export default function ProfileApp({
       });
       toast("Отмечено как актуальное");
     },
-    [saveProfile, toast],
+    [writeProfileNow, toast],
   );
 
   // ---------- записи ----------
@@ -274,14 +300,112 @@ export default function ProfileApp({
             : i,
         ),
       );
-      const ok = await track(
-        supabase.from("profile_items").update(dbPatch).eq("id", id),
-      );
-      if (ok && patch.status !== undefined && patch.status !== cur.status)
-        reloadHistory();
+      // запишется по кнопке «Сохранить»
+      dirtyItems.current.add(id);
+      markDirty();
     },
-    [supabase, track, reloadHistory, setItems],
+    [setItems, markDirty],
   );
+
+  // ---------- задачи фазы 0: прогресс из заполненности профиля ----------
+  const syncSteps = useCallback(async () => {
+    const updates = stepTasksRef.current
+      .filter((t) => t.status !== "done")
+      .map((t) => ({
+        t,
+        progress: stepProgress(
+          stepChecklist(t.profile_step, profileRef.current, itemsRef.current),
+        ),
+      }))
+      .filter(({ t, progress }) => progress !== t.progress);
+    if (!updates.length) return;
+    await Promise.all(
+      updates.map(({ t, progress }) =>
+        supabase.from("tasks").update({ progress }).eq("id", t.id),
+      ),
+    );
+    stepTasksRef.current = stepTasksRef.current.map((t) => {
+      const u = updates.find((x) => x.t.id === t.id);
+      return u ? { ...t, progress: u.progress } : t;
+    });
+    setStepTasks(stepTasksRef.current);
+  }, [supabase]);
+
+  // ---------- кнопка «Сохранить» ----------
+  const saveAll = useCallback(async () => {
+    if (saving) return false;
+    if (!dirtyProfile.current && !dirtyItems.current.size) return true;
+    setSaving(true);
+    const jobs: {
+      kind: "profile" | "item";
+      id?: string;
+      p: PromiseLike<{ error: { message: string } | null }>;
+    }[] = [];
+    if (dirtyProfile.current) {
+      const next = profileRef.current;
+      const row: Record<string, unknown> = {
+        project_id: project.id,
+        mission: next.mission,
+        positioning: next.positioning,
+        thesis: next.thesis,
+        next_review: next.next_review,
+        reviewed: next.reviewed,
+        updated: next.updated,
+        updated_at: new Date().toISOString(),
+      };
+      // колонки из миграций 0004/0005 — отправляем, только когда они нужны
+      if (next.market_notes) row.market_notes = next.market_notes;
+      if (Object.keys(next.economics ?? {}).length)
+        row.economics = next.economics;
+      jobs.push({
+        kind: "profile",
+        p: supabase.from("product_profiles").upsert(row),
+      });
+    }
+    for (const id of dirtyItems.current) {
+      const it = itemsRef.current.find((i) => i.id === id);
+      if (!it) continue;
+      jobs.push({
+        kind: "item",
+        id,
+        p: supabase
+          .from("profile_items")
+          .update({ title: it.title, status: it.status, data: it.data })
+          .eq("id", id),
+      });
+    }
+    const results = await Promise.all(jobs.map((j) => j.p));
+    let firstError: string | null = null;
+    results.forEach((r, k) => {
+      const j = jobs[k];
+      if (r.error) {
+        firstError ??= r.error.message;
+        return;
+      }
+      if (j.kind === "profile") {
+        dirtyProfile.current = false;
+        existsRef.current = true;
+      } else if (j.id) dirtyItems.current.delete(j.id);
+    });
+    markDirty();
+    setSaving(false);
+    if (firstError) {
+      toast("Не удалось сохранить: " + firstError);
+      return false;
+    }
+    toast("Сохранено ✓");
+    reloadHistory();
+    syncSteps();
+    return true;
+  }, [
+    saving,
+    supabase,
+    project.id,
+    markDirty,
+    toast,
+    reloadHistory,
+    syncSteps,
+  ]);
 
   async function removeItem(id: string) {
     setItems((xs) => xs.filter((i) => i.id !== id));
@@ -290,10 +414,15 @@ export default function ProfileApp({
         t.hypothesis_id === id ? { ...t, hypothesis_id: null } : t,
       ),
     );
+    dirtyItems.current.delete(id);
+    markDirty();
     const ok = await track(
       supabase.from("profile_items").delete().eq("id", id),
     );
-    if (ok) reloadHistory();
+    if (ok) {
+      reloadHistory();
+      syncSteps();
+    }
   }
 
   const addNote = useCallback(
@@ -370,7 +499,19 @@ export default function ProfileApp({
     if (p.value?.trim() && !t.value?.trim()) patch.value = p.value;
     if (p.difference?.trim() && !t.advantage?.trim())
       patch.advantage = p.difference;
-    if (Object.keys(patch).length && !missingTables) patchThesis(patch);
+    if (Object.keys(patch).length && !missingTables)
+      writeProfileNow({ thesis: { ...t, ...patch } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ?sec=<раздел> — перейти к полю (ссылки из задач фазы 0)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const sec = url.searchParams.get("sec");
+    if (!sec) return;
+    url.searchParams.delete("sec");
+    window.history.replaceState(null, "", url.toString());
+    setTimeout(() => goTo(tab, sec), 100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -394,14 +535,43 @@ export default function ProfileApp({
     window.history.replaceState(null, "", url.toString());
   }, [tab]);
 
-  // предупреждение, если закрывают вкладку во время сохранения
+  // предупреждение, если закрывают вкладку с несохранённым
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => {
-      if (pending > 0) e.preventDefault();
+      if (pending > 0 || dirtyCount > 0) e.preventDefault();
     };
     window.addEventListener("beforeunload", h);
     return () => window.removeEventListener("beforeunload", h);
-  }, [pending]);
+  }, [pending, dirtyCount]);
+
+  // переходы по ссылкам внутри приложения — спросить, если есть несохранённое
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (!dirtyCount || e.defaultPrevented || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as HTMLElement).closest("a");
+      if (!a || a.target === "_blank") return;
+      const href = a.getAttribute("href");
+      if (!href || !href.startsWith("/")) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setLeaveTo(href);
+    };
+    document.addEventListener("click", h, true);
+    return () => document.removeEventListener("click", h, true);
+  }, [dirtyCount]);
+
+  // Ctrl/Cmd + S
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        saveAll();
+      }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [saveAll]);
 
   const byKind = useCallback(
     (k: ItemKind) =>
@@ -454,12 +624,28 @@ export default function ProfileApp({
               projectId={project.id}
               name={name}
               onRename={rename}
+              onBeforeNavigate={(href) => {
+                if (!dirtyCount) return true;
+                setLeaveTo(href);
+                return false;
+              }}
             />
           </div>
           <ProjectNav projectId={project.id} active="profile" />
-          <span className="w-24 shrink-0 text-right text-xs text-muted md:w-auto md:flex-1 md:basis-0">
-            {pending > 0 ? "Сохраняю…" : "Сохранено ✓"}
-          </span>
+          <div className="flex shrink-0 justify-end md:flex-1 md:basis-0">
+            <button
+              onClick={() => saveAll()}
+              disabled={!dirtyCount || saving}
+              title="Сохранить изменения (Ctrl+S)"
+              className={`rounded-[10px] px-3.5 py-2 text-sm font-bold whitespace-nowrap transition ${
+                dirtyCount
+                  ? "bg-accent text-white shadow-[0_2px_10px_rgba(255,90,54,.3)] hover:brightness-105"
+                  : "text-muted"
+              } disabled:cursor-default`}
+            >
+              {saving ? "Сохраняю…" : dirtyCount ? "Сохранить" : "Сохранено ✓"}
+            </button>
+          </div>
         </div>
         <div className="mt-4 flex gap-1 overflow-x-auto">
           {TABS.map((t) => (
@@ -510,6 +696,43 @@ export default function ProfileApp({
         «<b>{removing?.title || "без названия"}</b>» будет удалено. В истории
         останется запись об удалении.
       </ConfirmDialog>
+      <Modal
+        open={!!leaveTo}
+        onClose={() => setLeaveTo(null)}
+        title="Есть несохранённые изменения"
+        width={460}
+      >
+        <p className="text-[15px] leading-relaxed text-[#45443e]">
+          Сохранить их перед переходом?
+        </p>
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <Btn onClick={() => setLeaveTo(null)}>Отмена</Btn>
+          <Btn
+            onClick={() => {
+              const to = leaveTo!;
+              dirtyProfile.current = false;
+              dirtyItems.current.clear();
+              markDirty();
+              setLeaveTo(null);
+              router.push(to);
+            }}
+          >
+            Не сохранять
+          </Btn>
+          <Btn
+            variant="primary"
+            onClick={async () => {
+              const to = leaveTo!;
+              if (await saveAll()) {
+                setLeaveTo(null);
+                router.push(to);
+              }
+            }}
+          >
+            Сохранить и перейти
+          </Btn>
+        </div>
+      </Modal>
       <Toast text={toastText} />
     </div>
   );

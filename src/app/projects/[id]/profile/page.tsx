@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import ProfileApp from "@/components/profile/ProfileApp";
+import ProfileApp, { type StepTask } from "@/components/profile/ProfileApp";
 import {
   emptyProfile,
   type HistoryEntry,
@@ -29,38 +29,51 @@ export default async function ProfilePage({
     .maybeSingle();
   if (!project) notFound();
 
-  const [profileRes, itemsRes, historyRes, tasksRes, phasesRes, econProbe] =
-    await Promise.all([
-      supabase
-        .from("product_profiles")
-        .select("*")
-        .eq("project_id", id)
-        .maybeSingle(),
-      supabase
-        .from("profile_items")
-        .select("*")
-        .eq("project_id", id)
-        .order("position"),
-      supabase
-        .from("profile_history")
-        .select("*, actor:profiles(full_name,email)")
-        .eq("project_id", id)
-        .order("created_at", { ascending: false })
-        .limit(200),
-      // задачи, привязанные к гипотезам (колонка появляется в миграции 0004)
-      supabase
-        .from("tasks")
-        .select("id,name,status,phase_id,hypothesis_id")
-        .eq("project_id", id)
-        .not("hypothesis_id", "is", null),
-      supabase
-        .from("phases")
-        .select("id,name")
-        .eq("project_id", id)
-        .order("position"),
-      // есть ли колонка economics (миграция 0005)
-      supabase.from("product_profiles").select("economics").limit(1),
-    ]);
+  const [
+    profileRes,
+    itemsRes,
+    historyRes,
+    tasksRes,
+    phasesRes,
+    econProbe,
+    stepsRes,
+  ] = await Promise.all([
+    supabase
+      .from("product_profiles")
+      .select("*")
+      .eq("project_id", id)
+      .maybeSingle(),
+    supabase
+      .from("profile_items")
+      .select("*")
+      .eq("project_id", id)
+      .order("position"),
+    supabase
+      .from("profile_history")
+      .select("*, actor:profiles(full_name,email)")
+      .eq("project_id", id)
+      .order("created_at", { ascending: false })
+      .limit(200),
+    // задачи, привязанные к гипотезам (колонка появляется в миграции 0004)
+    supabase
+      .from("tasks")
+      .select("id,name,status,phase_id,hypothesis_id")
+      .eq("project_id", id)
+      .not("hypothesis_id", "is", null),
+    supabase
+      .from("phases")
+      .select("id,name")
+      .eq("project_id", id)
+      .order("position"),
+    // есть ли колонка economics (миграция 0005)
+    supabase.from("product_profiles").select("economics").limit(1),
+    // задачи фазы 0 (миграция 0006)
+    supabase
+      .from("tasks")
+      .select("id,profile_step,status,progress")
+      .eq("project_id", id)
+      .not("profile_step", "is", null),
+  ]);
 
   const missingTables =
     !!profileRes.error && profileRes.error.code !== "PGRST116";
@@ -82,6 +95,7 @@ export default async function ProfilePage({
       missingTables={missingTables}
       needsMarket={needsMarket}
       needsEconomics={needsEconomics}
+      stepTasks={(stepsRes.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}
       phases={(phasesRes.data ?? []) as { id: string; name: string }[]}
     />

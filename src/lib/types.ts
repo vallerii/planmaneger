@@ -75,6 +75,7 @@ export type Task = {
   status: Status;
   share_token?: string | null;
   hypothesis_id?: string | null;
+  profile_step?: string | null;
   deadline: string | null;
   position: number;
   comment_count?: number;

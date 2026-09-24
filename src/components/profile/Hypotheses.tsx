@@ -249,14 +249,14 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
   const linked = ctx.tasks.filter((t) => t.hypothesis_id === h.id);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [phaseId, setPhaseId] = useState(ctx.phases[0]?.id ?? "");
+  const [phaseId, setPhaseId] = useState(ctx.phases.at(-1)?.id ?? "");
   const [busy, setBusy] = useState(false);
   const phaseName = (id: string) =>
     ctx.phases.find((p) => p.id === id)?.name ?? "";
 
   function start() {
     setName(h.title.trim() ? `Проверить: ${h.title.trim()}` : "");
-    setPhaseId((cur) => cur || ctx.phases[0]?.id || "");
+    setPhaseId((cur) => cur || ctx.phases.at(-1)?.id || "");
     setOpen(true);
   }
 
