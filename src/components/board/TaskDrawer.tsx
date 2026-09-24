@@ -20,12 +20,18 @@ import {
   sizeDays as sizeOf,
   workdaysLabel,
 } from "@/lib/schedule";
+import Link from "next/link";
 import { Btn, Select, TrashIcon, trashBtnCls } from "../ui";
 import RichEditor from "./RichEditor";
 import ShareDialog, { LinkIcon } from "./ShareDialog";
 
+export type HypothesisRef = { id: string; title: string; status: string };
+
 type Props = {
   task: Task;
+  projectId?: string;
+  /** null/undefined — связь с гипотезами недоступна */
+  hypotheses?: HypothesisRef[] | null;
   phaseName: string;
   sizeDays: SizeDays;
   me: Profile;
@@ -49,6 +55,8 @@ const commentTime = new Intl.DateTimeFormat("ru-RU", {
 
 export default function TaskDrawer({
   task,
+  projectId,
+  hypotheses,
   phaseName,
   sizeDays,
   me,
@@ -376,6 +384,45 @@ export default function TaskDrawer({
               <label className={lbl}>Успеваем к дедлайну?</label>
               <DeadlineHint task={task} sizeDays={sizeDays} />
             </div>
+            {hypotheses && (
+              <div className={card + " sm:col-span-2"}>
+                <div className="flex items-baseline gap-2">
+                  <label className={lbl}>Проверяет гипотезу</label>
+                  {task.hypothesis_id && projectId && (
+                    <Link
+                      href={`/projects/${projectId}/profile?tab=hypotheses&item=${task.hypothesis_id}`}
+                      className="ml-auto text-[11px] font-bold text-muted hover:text-ink"
+                    >
+                      Открыть в профиле →
+                    </Link>
+                  )}
+                </div>
+                <Select
+                  value={task.hypothesis_id ?? ""}
+                  onChange={(v: string) =>
+                    onUpdate({ hypothesis_id: v || null })
+                  }
+                  menuWidth={360}
+                  className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
+                  options={[
+                    {
+                      value: "",
+                      label: (
+                        <span className="text-muted">
+                          {hypotheses.length
+                            ? "— не связана"
+                            : "— гипотез пока нет в профиле"}
+                        </span>
+                      ),
+                    },
+                    ...hypotheses.map((h) => ({
+                      value: h.id,
+                      label: h.title.trim() || "Гипотеза без формулировки",
+                    })),
+                  ]}
+                />
+              </div>
+            )}
           </div>
 
           <SectionTitle>Описание</SectionTitle>

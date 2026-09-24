@@ -36,7 +36,7 @@ import type {
   Task,
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { buildSchedule, dateRu, fmtDays, parseDate } from "@/lib/schedule";
+import { buildSchedule, dateRu, parseDate } from "@/lib/schedule";
 import {
   Brand,
   Btn,
@@ -53,6 +53,8 @@ import { TaskCardView } from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
 import MembersModal from "./MembersModal";
 import ProjectTitle from "./ProjectTitle";
+import ProjectNav from "../ProjectNav";
+import type { HypothesisRef } from "./TaskDrawer";
 
 type Props = {
   initialProject: Project;
@@ -60,6 +62,10 @@ type Props = {
   initialTasks: Task[];
   initialMembers: Member[];
   me: Profile;
+  mission?: string | null;
+  /** null — миграция 0004 ещё не применена, связь с гипотезами скрыта */
+  hypotheses?: HypothesisRef[] | null;
+  initialTaskId?: string | null;
 };
 
 const byPos = <T extends { position: number }>(a: T, b: T) =>
@@ -71,6 +77,9 @@ export default function Board({
   initialTasks,
   initialMembers,
   me,
+  mission,
+  hypotheses = null,
+  initialTaskId = null,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -78,7 +87,11 @@ export default function Board({
   const [phases, setPhases] = useState(() => [...initialPhases].sort(byPos));
   const [tasks, setTasks] = useState(initialTasks);
   const [members, setMembers] = useState(initialMembers);
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(() =>
+    initialTaskId && initialTasks.some((t) => t.id === initialTaskId)
+      ? initialTaskId
+      : null,
+  );
   const [toastText, setToastText] = useState<string | null>(null);
   const [modal, setModal] = useState<
     null | "phase" | "task" | "date" | "settings" | "members"
@@ -336,6 +349,7 @@ export default function Board({
         needs_discussion: draft.needs_discussion,
         status: draft.status,
         deadline: draft.deadline,
+        ...(draft.hypothesis_id ? { hypothesis_id: draft.hypothesis_id } : {}),
         position,
       })
       .select()
@@ -544,15 +558,18 @@ export default function Board({
     <div className="min-h-screen">
       <header className="z-10 md:sticky md:top-0 border-b border-line bg-bg/90 px-3.5 py-4 backdrop-blur md:px-6">
         <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
-          <Link href="/" className="shrink-0" title="Все проекты">
-            <Brand />
-          </Link>
-          <ProjectTitle
-            projectId={project.id}
-            name={project.name}
-            onRename={(name) => updateProject({ name })}
-          />
-          <div className="flex w-full gap-2 overflow-x-auto md:w-auto">
+          <div className="flex min-w-0 basis-full items-center gap-3 md:flex-1 md:basis-auto md:gap-4 2xl:basis-0">
+            <Link href="/" className="shrink-0" title="Все проекты">
+              <Brand />
+            </Link>
+            <ProjectTitle
+              projectId={project.id}
+              name={project.name}
+              onRename={(name) => updateProject({ name })}
+            />
+          </div>
+          <ProjectNav projectId={project.id} active="board" />
+          <div className="flex w-full gap-2 overflow-x-auto md:w-auto 2xl:flex-1 2xl:basis-0 2xl:justify-end">
             <Btn onClick={() => setModal("date")}>
               Старт: {dateRu(parseDate(project.start_date))}
             </Btn>
@@ -565,23 +582,28 @@ export default function Board({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-          <Metric
-            label="Осталось"
-            value={`${fmtDays(schedule.remaining)} раб. дн.`}
-          />
-          <Metric
-            label="Общий прогресс"
-            value={`${schedule.progress}%`}
-            bar={schedule.progress}
-          />
-          <Metric
-            label="Плановая дата запуска"
-            value={schedule.finish ? dateRu(schedule.finish) : "Готово"}
-          />
-          <Metric label="Задач" value={String(schedule.count)} />
-          <Metric label="Фаз" value={String(phases.length)} />
-        </div>
+        <Link
+          href={`/projects/${project.id}/profile?tab=foundation`}
+          className="group mt-3 flex items-center gap-2.5 rounded-[11px] border border-dashed border-line px-3 py-2 text-sm hover:border-[#c9c6bb] hover:bg-white"
+          title="Открыть профиль продукта"
+        >
+          <span className="shrink-0 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
+            Миссия
+          </span>
+          {mission?.trim() ? (
+            <span className="min-w-0 flex-1 truncate font-semibold">
+              {mission}
+            </span>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-muted">
+              Не заполнена — добавьте миссию и позиционирование, чтобы не терять
+              фокус
+            </span>
+          )}
+          <span className="shrink-0 text-xs font-bold text-muted group-hover:text-ink">
+            Профиль →
+          </span>
+        </Link>
       </header>
 
       <main className="px-4 pt-5 pb-10 md:px-6">
@@ -690,6 +712,8 @@ export default function Board({
           sizeDays={sd}
           me={me}
           members={members}
+          projectId={project.id}
+          hypotheses={hypotheses}
           onClose={() => setActiveTaskId(null)}
           onUpdate={(patch) => updateTask(activeTask.id, patch)}
           onDelete={() => setConfirmTask(activeTask.id)}
@@ -725,6 +749,8 @@ export default function Board({
           sizeDays={sd}
           me={me}
           members={members}
+          projectId={project.id}
+          hypotheses={hypotheses}
           onClose={() => setDraftTask(null)}
           onUpdate={(patch) =>
             setDraftTask((d) => (d ? { ...d, ...patch } : d))
@@ -802,31 +828,6 @@ export default function Board({
         />
       )}
       <Toast text={toastText} />
-    </div>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  bar,
-}: {
-  label: string;
-  value: string;
-  bar?: number;
-}) {
-  return (
-    <div className="rounded-[13px] border border-line bg-white px-3.5 py-3">
-      <small className="block font-semibold text-muted">{label}</small>
-      <strong className="mt-0.5 block text-xl tracking-tight">{value}</strong>
-      {bar !== undefined && (
-        <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae3]">
-          <span
-            className="block h-full rounded-full bg-ok transition-all"
-            style={{ width: `${bar}%` }}
-          />
-        </div>
-      )}
     </div>
   );
 }

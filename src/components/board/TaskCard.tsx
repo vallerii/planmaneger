@@ -81,6 +81,9 @@ export function TaskCardView({
           <Badge className="bg-[#e8f5ef] text-[#0b6b4c]">{t.progress}%</Badge>
         )}
         {!!t.comment_count && <Badge>{t.comment_count} комм.</Badge>}
+        {t.hypothesis_id && (
+          <Badge className="bg-[#f1ecfb] text-[#5b3fa0]">🧪 гипотеза</Badge>
+        )}
         {dl?.kind === "tight" && (
           <Badge className="bg-[#fff5d8] text-[#6b4c00]">⚠ впритык</Badge>
         )}
