@@ -135,7 +135,7 @@ export default function PhaseColumn(props: Props) {
         {st.discuss > 0 && (
           <div className="mt-2 text-[11px]">
             <span className="rounded-full border border-[#edd48e] bg-[#fff5d8] px-2 py-0.5 font-extrabold text-[#6b4c00]">
-              💬 {st.discuss} обсудить
+              💬 {st.discuss} нужно обсудить
             </span>
           </div>
         )}

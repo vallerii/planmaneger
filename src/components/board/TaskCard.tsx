@@ -3,10 +3,11 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
-import { SIZES } from "@/lib/types";
+import { SIZES, STATUS_META } from "@/lib/types";
 import { Select, TrashIcon, trashBtnCls } from "../ui";
 import {
   deadlineStatus,
+  effectiveProgress,
   fmtDays,
   plainFromHtml,
   remainingTaskDays,
@@ -42,14 +43,16 @@ export function TaskCardView({
     <div
       className={`group relative rounded-[13px] border border-[#dedcd4] bg-white p-3 transition hover:border-[#cbc8be] hover:shadow-[0_7px_18px_rgba(20,20,10,.07)] ${
         overlay ? "cursor-grabbing shadow-soft" : "cursor-grab"
-      }`}
+      } ${t.status === "cancelled" ? "opacity-60" : ""}`}
       style={{ minHeight: MIN_H[t.size] }}
     >
       <div className="flex items-start gap-[7px]">
         <span className="shrink-0 rounded-[7px] bg-ink px-1.5 py-1 text-[10px] font-black tracking-wide text-white">
           P{index + 1}
         </span>
-        <div className="min-h-9 flex-1 leading-tight font-bold break-words">
+        <div
+          className={`min-h-9 flex-1 leading-tight font-bold break-words ${t.status === "cancelled" ? "text-muted line-through" : ""}`}
+        >
           {t.name}
         </div>
         {onDelete && (
@@ -69,9 +72,13 @@ export function TaskCardView({
       </div>
 
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
-        <Badge className="bg-[#e8f5ef] text-[#0b6b4c]">{t.progress}%</Badge>
-        {t.needs_discussion && (
-          <Badge className="bg-[#fff5d8] text-[#6b4c00]">💬 обсудить</Badge>
+        {t.status !== "todo" && (
+          <Badge className={STATUS_META[t.status].badge}>
+            {STATUS_META[t.status].label}
+          </Badge>
+        )}
+        {t.status !== "done" && t.status !== "cancelled" && (
+          <Badge className="bg-[#e8f5ef] text-[#0b6b4c]">{t.progress}%</Badge>
         )}
         {!!t.comment_count && <Badge>{t.comment_count} комм.</Badge>}
         {dl?.kind === "tight" && (
@@ -91,7 +98,7 @@ export function TaskCardView({
       <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae4]">
         <span
           className="block h-full rounded-full bg-ok"
-          style={{ width: `${t.progress}%` }}
+          style={{ width: `${effectiveProgress(t)}%` }}
         />
       </div>
 

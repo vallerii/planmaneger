@@ -334,6 +334,7 @@ export default function Board({
         description: draft.description,
         progress: draft.progress,
         needs_discussion: draft.needs_discussion,
+        status: draft.status,
         deadline: draft.deadline,
         position,
       })
@@ -595,8 +596,8 @@ export default function Board({
             </span>
           ))}
           <span>
-            <b>P1</b> — приоритет. Клик по карточке открывает детали. 💬 — нужно
-            обсудить.
+            <b>P1</b> — приоритет. Клик по карточке открывает детали. Отменённые
+            задачи не учитываются в сроках.
           </span>
         </div>
 
@@ -636,6 +637,7 @@ export default function Board({
                       description: "",
                       progress: 0,
                       needs_discussion: false,
+                      status: "todo",
                       deadline: null,
                       position: 0,
                       comment_count: 0,

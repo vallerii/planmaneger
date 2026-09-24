@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { STATUSES, STATUS_META, type Status } from "@/lib/types";
 import type {
   Comment,
   Member,
@@ -21,6 +22,7 @@ import {
 } from "@/lib/schedule";
 import { Btn, Select, TrashIcon, trashBtnCls } from "../ui";
 import RichEditor from "./RichEditor";
+import ShareDialog, { LinkIcon } from "./ShareDialog";
 
 type Props = {
   task: Task;
@@ -212,8 +214,23 @@ export default function TaskDrawer({
     onError((await supabase.from("comments").delete().eq("id", id)).error);
   }
 
-  const setProgress = (v: number) =>
-    onUpdate({ progress: Math.max(0, Math.min(100, Math.round(v) || 0)) });
+  const setProgress = (v: number) => {
+    const progress = Math.max(0, Math.min(100, Math.round(v) || 0));
+    if (progress === 100 && task.status !== "done")
+      onUpdate({ progress, status: "done" });
+    else if (progress < 100 && task.status === "done")
+      onUpdate({ progress, status: "in_progress" });
+    else if (progress > 0 && task.status === "todo")
+      onUpdate({ progress, status: "in_progress" });
+    else onUpdate({ progress });
+  };
+  const setStatus = (status: Status) => {
+    if (status === "done") onUpdate({ status, progress: 100 });
+    else if (task.status === "done" && task.progress === 100)
+      onUpdate({ status, progress: status === "todo" ? 0 : 90 });
+    else onUpdate({ status });
+  };
+  const [shareOpen, setShareOpen] = useState(false);
   const card = "rounded-xl border border-line p-[11px]";
   const lbl = "mb-1.5 block text-[11px] font-bold text-muted";
   const inp = "w-full rounded-lg border-0 bg-[#f5f4ef] p-2 outline-none";
@@ -257,6 +274,16 @@ export default function TaskDrawer({
           <span className="shrink-0 rounded-full bg-[#efeee8] px-2 py-1 text-[10px] font-extrabold text-[#5d5b54]">
             {phaseName}
           </span>
+          {!isCreate && (
+            <button
+              onClick={() => setShareOpen(true)}
+              title="Поделиться ссылкой на задачу"
+              aria-label="Поделиться ссылкой"
+              className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[8px] transition hover:bg-[#f0efe9] hover:text-ink ${task.share_token ? "text-[#1d4f9a]" : "text-[#9a988f]"}`}
+            >
+              <LinkIcon />
+            </button>
+          )}
           {!isCreate && onDelete && (
             <button
               onClick={onDelete}
@@ -285,28 +312,23 @@ export default function TaskDrawer({
               />
             </div>
             <div className={card}>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <label className={lbl + " !mb-0"}>Нужно обсудить</label>
-                  <div className="mt-1 text-[11px] text-muted">
-                    Помечает задачу как требующую совместного решения
-                  </div>
-                </div>
-                <button
-                  role="switch"
-                  aria-checked={task.needs_discussion}
-                  onClick={() =>
-                    onUpdate({ needs_discussion: !task.needs_discussion })
-                  }
-                  className={`relative h-6 w-[42px] shrink-0 rounded-full transition ${task.needs_discussion ? "bg-warn" : "bg-[#d7d5ce]"}`}
-                >
-                  <span
-                    className={`absolute top-[3px] left-[3px] h-[18px] w-[18px] rounded-full bg-white shadow transition ${
-                      task.needs_discussion ? "translate-x-[18px]" : ""
-                    }`}
-                  />
-                </button>
-              </div>
+              <label className={lbl}>Статус</label>
+              <Select
+                value={task.status}
+                onChange={(v: Status) => setStatus(v)}
+                className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
+                options={STATUSES.map((st) => ({
+                  value: st,
+                  label: (
+                    <span className="inline-flex items-center gap-2">
+                      <span
+                        className={`h-2 w-2 rounded-full ${STATUS_META[st].dot}`}
+                      />
+                      {STATUS_META[st].label}
+                    </span>
+                  ),
+                }))}
+              />
             </div>
             <div className={card}>
               <label className={lbl}>Прогресс</label>
@@ -443,6 +465,15 @@ export default function TaskDrawer({
           </div>
         )}
       </aside>
+      {!isCreate && (
+        <ShareDialog
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
+          taskName={task.name}
+          token={task.share_token ?? null}
+          onChange={(share_token) => onUpdate({ share_token })}
+        />
+      )}
     </>
   );
 }

@@ -47,24 +47,30 @@ export function fmtDays(n: number) {
 }
 
 export const sizeDays = (t: Task, sd: SizeDays) => Number(sd[t.size]) || 0;
+/** Готово = 100%, отменённые задачи не участвуют в расчёте сроков. */
+export const effectiveProgress = (t: Task) =>
+  t.status === "done" ? 100 : t.progress || 0;
 export const remainingTaskDays = (t: Task, sd: SizeDays) =>
-  sizeDays(t, sd) * (1 - (t.progress || 0) / 100);
+  t.status === "cancelled"
+    ? 0
+    : sizeDays(t, sd) * (1 - effectiveProgress(t) / 100);
 
 export function phaseStats(tasks: Task[], sd: SizeDays) {
   let total = 0,
     done = 0,
     remaining = 0;
   for (const t of tasks) {
+    if (t.status === "cancelled") continue;
     const d = sizeDays(t, sd);
     total += d;
-    done += (d * (t.progress || 0)) / 100;
+    done += (d * effectiveProgress(t)) / 100;
     remaining += remainingTaskDays(t, sd);
   }
   return {
     total,
     remaining,
     progress: total ? Math.round((done / total) * 100) : 0,
-    discuss: tasks.filter((t) => t.needs_discussion).length,
+    discuss: tasks.filter((t) => t.status === "discuss").length,
   };
 }
 
@@ -149,8 +155,8 @@ export type DeadlineStatus =
 
 /** Сравнение оставшейся работы с рабочими днями до дедлайна. null — дедлайна нет. */
 export function deadlineStatus(t: Task, sd: SizeDays): DeadlineStatus | null {
-  if (!t.deadline) return null;
-  if ((t.progress || 0) >= 100) return { kind: "done" };
+  if (!t.deadline || t.status === "cancelled") return null;
+  if (effectiveProgress(t) >= 100) return { kind: "done" };
   const need = remainingTaskDays(t, sd);
   if (t.deadline < todayISO()) return { kind: "overdue", need };
   const avail = workdaysUntil(t.deadline);
