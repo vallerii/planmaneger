@@ -349,6 +349,7 @@ function CompetitorCard({
           <Label>Для кого (ICP)</Label>
           <Pick
             value={c.data.icp_id ?? ""}
+            placeholder="Все ICP"
             options={icpOptions}
             onChange={(v) => set({ icp_id: v || null })}
           />

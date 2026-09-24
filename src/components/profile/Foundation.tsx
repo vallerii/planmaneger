@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   STATUS,
+  TONE,
   freshness,
-  positioningStatement,
   statusOf,
   type ProfileItem,
 } from "@/lib/profile";
@@ -19,7 +19,6 @@ import {
   Section,
   StatusPick,
 } from "./fields";
-import { Statement } from "./Overview";
 
 const THESIS_TABS = [
   {
@@ -43,20 +42,30 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
   const { profile, items } = ctx;
   const [thesisTab, setThesisTab] =
     useState<(typeof THESIS_TABS)[number]["key"]>("main");
-  const [copied, setCopied] = useState(false);
   const icps = ctx.byKind("icp");
   const problems = ctx.byKind("problem");
-  const pos = profile.positioning;
-  const statement = positioningStatement(pos, items, ctx.projectName);
   const icpOptions = icps.map((i) => ({
     value: i.id,
     label: i.title || "ICP без названия",
   }));
-  const problemOptions = problems.map((p) => ({
-    value: p.id,
-    label: p.title || "Проблема без названия",
-  }));
   const thesis = THESIS_TABS.find((t) => t.key === thesisTab)!;
+
+  // переход из позиционирования: «thesis:advantage», «thesis:category», …
+  const { focus, setFocus } = ctx;
+  useEffect(() => {
+    if (!focus?.startsWith("thesis:")) return;
+    const key = focus.slice(7);
+    const t = setTimeout(() => {
+      if (key === "advantage") setThesisTab("advantage");
+      setTimeout(() => {
+        document
+          .querySelector<HTMLTextAreaElement>(`[data-focus="${key}"] textarea`)
+          ?.focus();
+      }, 80);
+      setFocus(null);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [focus, setFocus]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -88,6 +97,28 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
         fresh={freshness("thesis", profile, items)}
         onReviewed={() => ctx.markReviewed("thesis")}
       >
+        <div className="mb-4 grid gap-3 md:grid-cols-2">
+          <div data-focus="category">
+            <Label hint="для позиционирования">Мы — это…</Label>
+            <AutoText
+              value={profile.thesis.category ?? ""}
+              onSave={(v) => ctx.patchThesis({ category: v })}
+              placeholder="сервис проверки репутации компании"
+              single
+            />
+          </div>
+          <div data-focus="value">
+            <Label hint="для позиционирования">
+              Главный результат для клиента
+            </Label>
+            <AutoText
+              value={profile.thesis.value ?? ""}
+              onSave={(v) => ctx.patchThesis({ value: v })}
+              placeholder="за 1 день показывает, что мешает клиентам выбрать вас"
+              single
+            />
+          </div>
+        </div>
         <div className="mb-3 flex flex-wrap gap-1">
           {THESIS_TABS.map((t) => (
             <button
@@ -100,13 +131,21 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
             </button>
           ))}
         </div>
-        <AutoText
-          key={thesis.key}
-          value={profile.thesis[thesis.key] ?? ""}
-          onSave={(v) => ctx.patchThesis({ [thesis.key]: v })}
-          placeholder={thesis.ph}
-          rows={4}
-        />
+        <div data-focus={thesis.key}>
+          <AutoText
+            key={thesis.key}
+            value={profile.thesis[thesis.key] ?? ""}
+            onSave={(v) => ctx.patchThesis({ [thesis.key]: v })}
+            placeholder={thesis.ph}
+            rows={4}
+          />
+        </div>
+        {thesis.key === "advantage" && (
+          <p className="mt-2 text-xs text-muted">
+            Первое предложение попадает в позиционирование как «главное отличие»
+            — начните с самого важного.
+          </p>
+        )}
       </Section>
 
       {/* ПРОБЛЕМЫ */}
@@ -171,102 +210,6 @@ export default function Foundation({ ctx }: { ctx: ProfileCtx }) {
           ＋ Добавить ICP
         </AddBtn>
       </Section>
-
-      {/* ПОЗИЦИОНИРОВАНИЕ */}
-      <Section
-        id="positioning"
-        title="Позиционирование"
-        desc="Для кого мы, от чего спасаем, с чем нас сравнивают и чем мы лучше. Из полей собирается одна фраза."
-        fresh={freshness("positioning", profile, items)}
-        onReviewed={() => ctx.markReviewed("positioning")}
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <Label hint="из ICP выше">Для кого</Label>
-            <Pick
-              value={pos.icp_id ?? ""}
-              options={icpOptions}
-              onChange={(v) => ctx.patchPositioning({ icp_id: v || undefined })}
-              placeholder={
-                icps.length ? "Выберите ICP" : "Сначала добавьте ICP выше"
-              }
-            />
-          </div>
-          <div>
-            <Label hint="из проблем выше">Какая у них проблема</Label>
-            <Pick
-              value={pos.problem_id ?? ""}
-              options={problemOptions}
-              onChange={(v) =>
-                ctx.patchPositioning({ problem_id: v || undefined })
-              }
-              placeholder={
-                problems.length
-                  ? "Выберите проблему"
-                  : "Сначала добавьте проблему выше"
-              }
-            />
-          </div>
-          <div>
-            <Label>Чем решают сейчас (альтернативы)</Label>
-            <AutoText
-              single
-              value={pos.alternatives ?? ""}
-              onSave={(v) => ctx.patchPositioning({ alternatives: v })}
-              placeholder="агентства, ручная проверка, Excel…"
-            />
-          </div>
-          <div>
-            <Label>Категория — «мы это…»</Label>
-            <AutoText
-              single
-              value={pos.category ?? ""}
-              onSave={(v) => ctx.patchPositioning({ category: v })}
-              placeholder="сервис проверки репутации компании"
-            />
-          </div>
-          <div>
-            <Label>Ключевая ценность / результат</Label>
-            <AutoText
-              single
-              value={pos.value ?? ""}
-              onSave={(v) => ctx.patchPositioning({ value: v })}
-              placeholder="за 1 день показывает, что мешает клиентам выбрать вас"
-            />
-          </div>
-          <div>
-            <Label>Главное отличие</Label>
-            <AutoText
-              single
-              value={pos.difference ?? ""}
-              onSave={(v) => ctx.patchPositioning({ difference: v })}
-              placeholder="даём не отчёт, а конкретный план и цену исправления"
-            />
-          </div>
-        </div>
-        <div className="mt-5 rounded-[13px] border border-[#cfe6db] bg-[#eef7f2] p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] font-extrabold tracking-[.08em] text-[#0b5a40] uppercase">
-              Фраза позиционирования
-            </span>
-            <button
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(statement);
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 1800);
-                } catch {}
-              }}
-              className="text-xs font-bold text-[#0b5a40] hover:underline"
-            >
-              {copied ? "✓ Скопировано" : "Скопировать"}
-            </button>
-          </div>
-          <p className="mt-1.5 leading-relaxed">
-            <Statement text={statement} />
-          </p>
-        </div>
-      </Section>
     </div>
   );
 }
@@ -311,6 +254,7 @@ function ProblemCard({
           <Label>У кого (ICP)</Label>
           <Pick
             value={p.data.icp_id ?? ""}
+            placeholder="Все ICP"
             options={icpOptions}
             onChange={(v) =>
               ctx.updateItem(p.id, { data: { icp_id: v || null } })
@@ -382,6 +326,7 @@ function IcpCard({
           rows={1}
         />
       </div>
+      <IcpProblems icp={icp} ctx={ctx} />
       <div className="mt-3">
         <Label>Описание</Label>
         <AutoText
@@ -465,6 +410,46 @@ function IcpCard({
             </button>
           )}
       </div>
+    </div>
+  );
+}
+
+/** Проблемы, привязанные к ICP (и общие — без привязки). */
+function IcpProblems({ icp, ctx }: { icp: ProfileItem; ctx: ProfileCtx }) {
+  const all = ctx.byKind("problem").filter((p) => p.status !== "refuted");
+  const own = all.filter((p) => p.data.icp_id === icp.id);
+  const common = all.filter((p) => !p.data.icp_id);
+  const list = [...own, ...common];
+  return (
+    <div className="mt-3">
+      <Label hint={common.length ? "включая общие для всех ICP" : undefined}>
+        Проблемы этого ICP
+      </Label>
+      {list.length === 0 ? (
+        <button
+          onClick={() => ctx.goTo("foundation", "problem")}
+          className="text-sm text-muted underline decoration-dotted underline-offset-2 hover:text-ink"
+        >
+          Нет проблем — привяжите их в разделе «Проблемы»
+        </button>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {list.map((p) => {
+            const st = statusOf("problem", p.status);
+            return (
+              <button
+                key={p.id}
+                onClick={() => ctx.goTo("foundation", `item-${p.id}`)}
+                className={`max-w-full truncate rounded-full px-2.5 py-1 text-xs font-bold ${TONE[st.tone].badge}`}
+                title={`${p.title || "Без названия"} · ${st.label}${p.data.icp_id ? "" : " · общая"}`}
+              >
+                {p.title || "Без названия"}
+                {!p.data.icp_id && <span className="opacity-60"> · общая</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

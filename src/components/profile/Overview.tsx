@@ -3,7 +3,6 @@
 import {
   SECTIONS,
   freshness,
-  positioningStatement,
   PROSPECT_RESEARCHED,
   PROSPECT_TARGET,
   readiness,
@@ -13,6 +12,7 @@ import {
 import { dateRu, parseDate, todayISO } from "@/lib/schedule";
 import type { ProfileCtx } from "./ProfileApp";
 import { Badge, FreshBadge } from "./fields";
+import Positioning from "./Positioning";
 
 export default function Overview({ ctx }: { ctx: ProfileCtx }) {
   const { profile, items } = ctx;
@@ -107,24 +107,9 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
             + Сформулировать миссию
           </button>
         )}
-        <div className="mt-4 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-          Позиционирование
+        <div className="mt-5">
+          <Positioning ctx={ctx} />
         </div>
-        <p className="mt-1 leading-relaxed text-[#45443e]">
-          <Statement
-            text={positioningStatement(
-              profile.positioning,
-              items,
-              ctx.projectName,
-            )}
-          />
-        </p>
-        <button
-          onClick={() => ctx.goTo("foundation", "positioning")}
-          className="mt-2 text-xs font-bold text-muted hover:text-ink"
-        >
-          Изменить →
-        </button>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

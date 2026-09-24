@@ -61,6 +61,9 @@ export type ProfileCtx = {
   markReviewed: (sec: SectionId) => void;
   addNote: (text: string) => Promise<void>;
   goTo: (tab: Tab, sec?: string) => void;
+  /** куда перейти внутри раздела (например «thesis:advantage») */
+  focus: string | null;
+  setFocus: (f: string | null) => void;
   patchEconomics: (patch: Partial<Economics>) => void;
   canEconomics: boolean;
   projectId: string;
@@ -345,15 +348,30 @@ export default function ProfileApp({
     [supabase, project.id, toast],
   );
 
+  const [focus, setFocus] = useState<string | null>(null);
   const goTo = useCallback((t: Tab, sec?: string) => {
     setTab(t);
+    if (sec?.includes(":")) setFocus(sec);
     setTimeout(() => {
       if (sec)
         document
-          .getElementById(`sec-${sec}`)
+          .getElementById(`sec-${sec.split(":")[0]}`)
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       else window.scrollTo({ top: 0, behavior: "smooth" });
     }, 50);
+  }, []);
+
+  // старые поля позиционирования → тезис (однократно, если в тезисе пусто)
+  useEffect(() => {
+    const p = profileRef.current.positioning ?? {};
+    const t = profileRef.current.thesis ?? {};
+    const patch: Record<string, string> = {};
+    if (p.category?.trim() && !t.category?.trim()) patch.category = p.category;
+    if (p.value?.trim() && !t.value?.trim()) patch.value = p.value;
+    if (p.difference?.trim() && !t.advantage?.trim())
+      patch.advantage = p.difference;
+    if (Object.keys(patch).length && !missingTables) patchThesis(patch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ?item=<id> — прокрутить к записи (ссылка «Открыть в профиле» из задачи)
@@ -406,6 +424,8 @@ export default function ProfileApp({
     markReviewed,
     addNote,
     goTo,
+    focus,
+    setFocus,
     patchEconomics,
     canEconomics: !needsEconomics,
     projectId: project.id,

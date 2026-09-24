@@ -34,7 +34,15 @@ export type Positioning = {
   difference?: string;
 };
 
-export type Thesis = { main?: string; why_now?: string; advantage?: string };
+export type Thesis = {
+  main?: string;
+  why_now?: string;
+  advantage?: string;
+  /** «Мы — это…» — категория продукта (для позиционирования) */
+  category?: string;
+  /** Главный результат для клиента (для позиционирования) */
+  value?: string;
+};
 
 export type ProductProfile = {
   project_id: string;
@@ -187,7 +195,6 @@ export const SECTIONS: { id: SectionId; label: string; tab: Tab }[] = [
   { id: "thesis", label: "Тезис продукта", tab: "foundation" },
   { id: "problem", label: "Проблемы", tab: "foundation" },
   { id: "icp", label: "ICP / целевые аудитории", tab: "foundation" },
-  { id: "positioning", label: "Позиционирование", tab: "foundation" },
   { id: "hypothesis", label: "Гипотезы", tab: "hypotheses" },
   { id: "competitor", label: "Конкуренты", tab: "market" },
   { id: "prospect", label: "10 потенциальных клиентов", tab: "market" },
@@ -292,7 +299,7 @@ export function readiness(profile: ProductProfile, items: ProfileItem[]) {
   };
   const foundation =
     ((profile.mission.trim() ? 1 : 0) +
-      Math.min(1, positioningFilled(profile.positioning) / 6) +
+      (buildPositioning(profile, items, "").some((s) => s.complete) ? 1 : 0) +
       (profile.thesis.main?.trim() ? 1 : 0)) /
     3;
   const problems = share("problem", ["validated", "refuted"]);
@@ -303,19 +310,129 @@ export function readiness(profile: ProductProfile, items: ProfileItem[]) {
   );
 }
 
-export function positioningStatement(
-  p: Positioning,
+// ---------- позиционирование: собирается из заполненных разделов ----------
+
+/** Куда вести, если часть фразы не заполнена. */
+export type PosTarget = { tab: Tab; sec: string };
+export type PosPart = {
+  key: string;
+  text: string | null;
+  placeholder: string;
+  target: PosTarget;
+};
+export type PosStatement = {
+  icp: ProfileItem | null;
+  parts: PosPart[];
+  complete: boolean;
+  text: string;
+};
+
+const PROBLEM_RANK: Record<string, number> = {
+  validated: 0,
+  signals: 1,
+  assumption: 2,
+};
+
+/** Первое предложение, без ведущего «Мы». */
+export function firstSentence(t?: string) {
+  const s =
+    (t ?? "")
+      .trim()
+      .split(/(?<=[.!?])\s+|\n/)[0]
+      ?.trim() ?? "";
+  return s.replace(/^мы\s+/i, "").replace(/[.!?]+$/, "");
+}
+
+const joinRu = (xs: string[]) =>
+  xs.length <= 1
+    ? (xs[0] ?? "")
+    : `${xs.slice(0, -1).join(", ")} и ${xs[xs.length - 1]}`;
+
+/**
+ * Фраза позиционирования для каждого ICP (кроме «Не подходит»).
+ * Проблемы и конкуренты без привязки к ICP считаются общими для всех.
+ */
+export function buildPositioning(
+  profile: ProductProfile,
   items: ProfileItem[],
   productName: string,
-) {
-  const icp = items.find((i) => i.id === p.icp_id)?.title;
-  const problem = items.find((i) => i.id === p.problem_id)?.title;
-  const part = (v: string | undefined, ph: string) =>
-    v && v.trim() ? v.trim() : `[${ph}]`;
-  return (
-    `Для ${part(icp, "ICP")}, у которых ${part(problem, "проблема")}, ${productName} — это ${part(p.category, "категория")}, ` +
-    `который ${part(p.value, "ключевая ценность")}. В отличие от ${part(p.alternatives, "альтернативы")}, мы ${part(p.difference, "главное отличие")}.`
-  );
+): PosStatement[] {
+  const icps = items
+    .filter((i) => i.kind === "icp" && i.status !== "rejected")
+    .sort((a, b) => a.position - b.position);
+  const t = profile.thesis ?? {};
+  const forIcp = (icp: ProfileItem | null): PosStatement => {
+    const fits = (i: ProfileItem) =>
+      !i.data.icp_id || (icp && i.data.icp_id === icp.id);
+    const problems = items
+      .filter(
+        (i) =>
+          i.kind === "problem" &&
+          i.status !== "refuted" &&
+          i.title.trim() &&
+          fits(i),
+      )
+      .sort(
+        (a, b) => (PROBLEM_RANK[a.status] ?? 3) - (PROBLEM_RANK[b.status] ?? 3),
+      )
+      .slice(0, 2)
+      .map((i) => i.title.trim());
+    const alternatives = items
+      .filter((i) => i.kind === "competitor" && i.title.trim() && fits(i))
+      .sort((a, b) => a.position - b.position)
+      .slice(0, 3)
+      .map((i) => i.title.trim());
+    const clean = (v?: string) => (v && v.trim() ? v.trim() : null);
+    const parts: PosPart[] = [
+      {
+        key: "icp",
+        text: clean(icp?.title),
+        placeholder: "ICP",
+        target: { tab: "foundation", sec: "icp" },
+      },
+      {
+        key: "problem",
+        text: problems.length ? joinRu(problems) : null,
+        placeholder: "проблема",
+        target: { tab: "foundation", sec: "problem" },
+      },
+      {
+        key: "category",
+        text: clean(t.category),
+        placeholder: "категория",
+        target: { tab: "foundation", sec: "thesis:category" },
+      },
+      {
+        key: "value",
+        text: clean(t.value),
+        placeholder: "ключевая ценность",
+        target: { tab: "foundation", sec: "thesis:value" },
+      },
+      {
+        key: "alternatives",
+        text: alternatives.length ? joinRu(alternatives) : null,
+        placeholder: "альтернативы",
+        target: { tab: "market", sec: "competitor" },
+      },
+      {
+        key: "difference",
+        text: clean(firstSentence(t.advantage)),
+        placeholder: "главное отличие",
+        target: { tab: "foundation", sec: "thesis:advantage" },
+      },
+    ];
+    const v = (k: string) => {
+      const p = parts.find((x) => x.key === k)!;
+      return p.text ?? `[${p.placeholder}]`;
+    };
+    return {
+      icp,
+      parts,
+      complete: parts.every((p) => p.text),
+      text: `Для ${v("icp")}, у которых ${v("problem")}, ${productName} — ${v("category")}: ${v("value")}. В отличие от ${v("alternatives")}, мы ${v("difference")}.`,
+    };
+  };
+  return icps.length ? icps.map(forIcp) : [forIcp(null)];
 }
 
 export const COMPETITOR_TYPES = [
