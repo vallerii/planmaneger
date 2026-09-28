@@ -371,6 +371,15 @@ function IcpCard({
         />
       </div>
       <div className="mt-3">
+        <Label hint="конкретный человек и его сценарий">Персона</Label>
+        <AutoText
+          value={icp.data.persona ?? ""}
+          onSave={(v) => ctx.updateItem(icp.id, { data: { persona: v } })}
+          placeholder="Например: Анна, 34, владелица салона на 2 точки. Утром смотрит отзывы в Google Maps, вечером сама отвечает клиентам в Instagram. Хочет…, мешает…, решает сейчас так…"
+          rows={4}
+        />
+      </div>
+      <div className="mt-3">
         <Label>Почему думаем, что подходит</Label>
         <AutoText
           value={icp.data.why ?? ""}
