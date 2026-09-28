@@ -132,11 +132,21 @@ export default function PhaseColumn(props: Props) {
             style={{ width: `${st.progress}%` }}
           />
         </div>
-        {st.discuss > 0 && (
-          <div className="mt-2 text-[11px]">
-            <span className="rounded-full border border-[#edd48e] bg-[#fff5d8] px-2 py-0.5 font-extrabold text-[#6b4c00]">
-              💬 {st.discuss} нужно обсудить
-            </span>
+        {(st.discuss > 0 || st.revisit > 0) && (
+          <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+            {st.discuss > 0 && (
+              <span className="rounded-full border border-[#edd48e] bg-[#fff5d8] px-2 py-0.5 font-extrabold text-[#6b4c00]">
+                💬 {st.discuss} нужно обсудить
+              </span>
+            )}
+            {st.revisit > 0 && (
+              <span
+                className="rounded-full border border-[#d9cdf5] bg-[#f6f2fe] px-2 py-0.5 font-extrabold text-[#5b3aa6]"
+                title="Задачи уже были сделаны и снова пересматриваются — на % фазы и сроки не влияют"
+              >
+                ↻ {st.revisit} на пересмотре
+              </span>
+            )}
           </div>
         )}
       </div>

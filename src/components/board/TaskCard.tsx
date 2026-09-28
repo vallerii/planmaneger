@@ -34,7 +34,11 @@ export function TaskCardView({
   onUpdate,
   onDelete,
 }: ViewProps) {
-  const overdue = !!t.deadline && t.deadline < todayISO() && t.progress < 100;
+  const overdue =
+    !!t.deadline &&
+    t.deadline < todayISO() &&
+    t.progress < 100 &&
+    t.status !== "revisit";
   const desc = plainFromHtml(t.description);
   const dl = deadlineStatus(t, sizeDays);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();

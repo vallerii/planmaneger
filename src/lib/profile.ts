@@ -61,12 +61,20 @@ export type Gtm = {
   launch_plan?: string;
 };
 
+/** MVP: цель и объём (миграция 0008). */
+export type Mvp = {
+  goal?: string;
+  in_scope?: string;
+  out_scope?: string;
+};
+
 export type ProductProfile = {
   project_id: string;
   mission: string;
   vision: string;
   market_size: MarketSize;
   gtm: Gtm;
+  mvp: Mvp;
   market_notes: string;
   economics: Economics;
   positioning: Positioning;
@@ -95,6 +103,7 @@ export const emptyProfile = (projectId: string): ProductProfile => ({
   vision: "",
   market_size: {},
   gtm: {},
+  mvp: {},
   market_notes: "",
   economics: {},
   positioning: {},
@@ -229,12 +238,14 @@ export const DEFAULT_STATUS: Record<ItemKind, string> = {
 export type Tab =
   | "overview"
   | "foundation"
-  | "hypotheses"
   | "market"
-  | "gtm"
+  | "hypotheses"
+  | "risks"
   | "economics"
+  | "mvp"
   | "metrics"
-  | "risks";
+  | "gtm"
+  | "decisions";
 export type SectionId =
   | "mission"
   | "positioning"
@@ -243,6 +254,7 @@ export type SectionId =
   | "plan"
   | "market_size"
   | "gtm"
+  | "mvp"
   | ItemKind;
 
 export const SECTIONS: { id: SectionId; label: string; tab: Tab }[] = [
@@ -250,19 +262,20 @@ export const SECTIONS: { id: SectionId; label: string; tab: Tab }[] = [
   { id: "thesis", label: "Тезис продукта", tab: "foundation" },
   { id: "problem", label: "Проблемы", tab: "foundation" },
   { id: "icp", label: "ICP / целевые аудитории", tab: "foundation" },
-  { id: "hypothesis", label: "Гипотезы", tab: "hypotheses" },
   { id: "competitor", label: "Конкуренты", tab: "market" },
   { id: "prospect", label: "10 потенциальных клиентов", tab: "market" },
   { id: "market_size", label: "Размер рынка", tab: "market" },
   { id: "market", label: "Выводы из анализа рынка", tab: "market" },
-  { id: "journey", label: "Путь клиента", tab: "gtm" },
-  { id: "channel", label: "Каналы привлечения", tab: "gtm" },
-  { id: "gtm", label: "Первые 100 клиентов и запуск", tab: "gtm" },
+  { id: "hypothesis", label: "Гипотезы", tab: "hypotheses" },
+  { id: "risk", label: "Риски и открытые вопросы", tab: "risks" },
   { id: "product", label: "Продукты и юнит-экономика", tab: "economics" },
   { id: "plan", label: "Финансовый план", tab: "economics" },
+  { id: "mvp", label: "Цель и объём MVP", tab: "mvp" },
+  { id: "journey", label: "Путь клиента", tab: "mvp" },
   { id: "metric", label: "Метрики успеха", tab: "metrics" },
-  { id: "risk", label: "Риски и открытые вопросы", tab: "risks" },
-  { id: "decision", label: "Принятые решения", tab: "risks" },
+  { id: "channel", label: "Каналы привлечения", tab: "gtm" },
+  { id: "gtm", label: "Первые 100 клиентов и запуск", tab: "gtm" },
+  { id: "decision", label: "Принятые решения", tab: "decisions" },
 ];
 
 export const STALE_DAYS = 14;
@@ -286,7 +299,8 @@ export function sectionTouched(
     sec === "market" ||
     sec === "plan" ||
     sec === "market_size" ||
-    sec === "gtm"
+    sec === "gtm" ||
+    sec === "mvp"
   ) {
     if (profile.updated[sec]) dates.push(profile.updated[sec]);
   } else {
@@ -316,6 +330,10 @@ export function isFilled(
   if (sec === "gtm") {
     const g = profile.gtm ?? {};
     return !!(g.first100?.trim() || g.launch_plan?.trim());
+  }
+  if (sec === "mvp") {
+    const m = profile.mvp ?? {};
+    return !!(m.goal?.trim() || m.in_scope?.trim() || m.out_scope?.trim());
   }
   return items.some((i) => i.kind === sec);
 }
@@ -505,6 +523,39 @@ export function buildPositioning(
   return icps.length ? icps.map(forIcp) : [forIcp(null)];
 }
 
+/** Итог решения: куда идём дальше по продуктовому циклу. */
+export const VERDICTS: {
+  value: string;
+  label: string;
+  tone: Tone;
+  hint: string;
+}[] = [
+  {
+    value: "proceed",
+    label: "Proceed — идём дальше",
+    tone: "green",
+    hint: "Гипотезы подтвердились — переходим к следующей фазе.",
+  },
+  {
+    value: "adjust",
+    label: "Adjust — корректируем",
+    tone: "blue",
+    hint: "Направление верное, но нужно поменять эксперименты, объём или экономику.",
+  },
+  {
+    value: "pivot",
+    label: "Pivot — разворот",
+    tone: "yellow",
+    hint: "Меняем проблему, аудиторию или решение — возвращаемся к основе и Discovery.",
+  },
+  {
+    value: "stop",
+    label: "Stop — останавливаем",
+    tone: "red",
+    hint: "Продолжать не имеет смысла — фиксируем выводы.",
+  },
+];
+
 export const COMPETITOR_TYPES = [
   { value: "direct", label: "Прямой" },
   { value: "indirect", label: "Косвенный" },
@@ -529,7 +580,8 @@ export type ProfileSection =
   | "market"
   | "plan"
   | "market_size"
-  | "gtm";
+  | "gtm"
+  | "mvp";
 
 /** Задача с доски, привязанная к гипотезе. */
 export type LinkedTask = {

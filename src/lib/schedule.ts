@@ -47,9 +47,12 @@ export function fmtDays(n: number) {
 }
 
 export const sizeDays = (t: Task, sd: SizeDays) => Number(sd[t.size]) || 0;
-/** Готово = 100%, отменённые задачи не участвуют в расчёте сроков. */
+/**
+ * Готово = 100%, отменённые задачи не участвуют в расчёте сроков.
+ * «На пересмотре» — задача уже была сделана: не снижает % фазы и не сдвигает сроки.
+ */
 export const effectiveProgress = (t: Task) =>
-  t.status === "done" ? 100 : t.progress || 0;
+  t.status === "done" || t.status === "revisit" ? 100 : t.progress || 0;
 export const remainingTaskDays = (t: Task, sd: SizeDays) =>
   t.status === "cancelled"
     ? 0
@@ -71,6 +74,7 @@ export function phaseStats(tasks: Task[], sd: SizeDays) {
     remaining,
     progress: total ? Math.round((done / total) * 100) : 0,
     discuss: tasks.filter((t) => t.status === "discuss").length,
+    revisit: tasks.filter((t) => t.status === "revisit").length,
   };
 }
 

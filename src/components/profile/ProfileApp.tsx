@@ -5,12 +5,13 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Brand, Btn, ConfirmDialog, Modal, Toast } from "../ui";
 import { useRouter } from "next/navigation";
-import { stepChecklist, stepProgress, type ProfileStep } from "@/lib/steps";
+import { taskStepProgress, type ProfileStep } from "@/lib/steps";
 import ProjectTitle from "../board/ProjectTitle";
 import ProjectNav from "../ProjectNav";
 import {
   DEFAULT_STATUS,
   KIND_LABEL,
+  SECTIONS,
   type HistoryEntry,
   type ItemKind,
   type LinkedTask,
@@ -23,22 +24,26 @@ import {
 import Overview from "./Overview";
 import Foundation from "./Foundation";
 import Hypotheses from "./Hypotheses";
-import RisksDecisions from "./RisksDecisions";
+import { Decisions, Risks } from "./RisksDecisions";
+import MvpTab from "./Mvp";
 import Market from "./Market";
 import EconomicsTab from "./Economics";
 import GtmTab from "./Gtm";
 import MetricsTab from "./Metrics";
 import type { Economics } from "@/lib/economics";
 
-const TABS: { id: Tab; label: string }[] = [
+/** Вкладки в порядке фаз продуктового цикла. */
+const TABS: { id: Tab; label: string; phase?: string }[] = [
   { id: "overview", label: "Обзор" },
-  { id: "foundation", label: "Основа" },
-  { id: "hypotheses", label: "Гипотезы" },
-  { id: "market", label: "Рынок" },
-  { id: "gtm", label: "Выход на рынок" },
-  { id: "economics", label: "Экономика" },
-  { id: "metrics", label: "Метрики" },
-  { id: "risks", label: "Риски и решения" },
+  { id: "foundation", label: "Основа", phase: "Product Profile" },
+  { id: "market", label: "Рынок", phase: "Discovery" },
+  { id: "hypotheses", label: "Гипотезы", phase: "Discovery · Validation" },
+  { id: "risks", label: "Риски", phase: "Validation" },
+  { id: "economics", label: "Экономика", phase: "Validation · Growth" },
+  { id: "mvp", label: "MVP", phase: "MVP" },
+  { id: "metrics", label: "Метрики", phase: "MVP · Launch · Measure" },
+  { id: "gtm", label: "Выход на рынок", phase: "Launch · Growth" },
+  { id: "decisions", label: "Решения", phase: "Validation · Measure" },
 ];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -90,14 +95,22 @@ export type ProfileCtx = {
     phaseId: string,
     deadline?: string | null,
   ) => Promise<boolean>;
+  /** миграция 0008: MVP и пересмотр задач */
+  canMvp: boolean;
+  /** задачи доски, связанные с профилем */
+  stepTasks: StepTask[];
+  /** отправить закрытые задачи этих шагов на пересмотр; вернёт, сколько задач */
+  reviseSteps: (steps: ProfileStep[]) => Promise<number>;
 };
 
 /** Задача фазы 0, связанная с вкладкой профиля. */
 export type StepTask = {
   id: string;
+  name: string;
   profile_step: ProfileStep;
   status: string;
   progress: number;
+  counted_from?: string | null;
 };
 
 export default function ProfileApp({
@@ -111,6 +124,7 @@ export default function ProfileApp({
   needsMarket = false,
   needsEconomics = false,
   needsCycle = false,
+  needsTemplate = false,
   initialTasks = [],
   phases = [],
   stepTasks: initialStepTasks = [],
@@ -125,6 +139,7 @@ export default function ProfileApp({
   needsMarket?: boolean;
   needsEconomics?: boolean;
   needsCycle?: boolean;
+  needsTemplate?: boolean;
   initialTasks?: LinkedTask[];
   phases?: { id: string; name: string }[];
   stepTasks?: StepTask[];
@@ -159,7 +174,7 @@ export default function ProfileApp({
   }, []);
   const [saving, setSaving] = useState(false);
   const [leaveTo, setLeaveTo] = useState<string | null>(null);
-  const [, setStepTasks] = useState(initialStepTasks);
+  const [stepTasks, setStepTasks] = useState(initialStepTasks);
   const stepTasksRef = useRef(initialStepTasks);
   const [toastText, setToastText] = useState<string | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
@@ -331,29 +346,73 @@ export default function ProfileApp({
     [setItems, markDirty],
   );
 
-  // ---------- задачи фазы 0: прогресс из заполненности профиля ----------
+  // ---------- задачи, связанные с профилем: прогресс из заполненности ----------
   const syncSteps = useCallback(async () => {
     const updates = stepTasksRef.current
-      .filter((t) => t.status !== "done")
+      .filter((t) => t.status !== "done" && t.status !== "cancelled")
       .map((t) => ({
         t,
-        progress: stepProgress(
-          stepChecklist(t.profile_step, profileRef.current, itemsRef.current),
-        ),
+        progress: taskStepProgress(t, profileRef.current, itemsRef.current),
       }))
-      .filter(({ t, progress }) => progress !== t.progress);
+      .filter(
+        ({ t, progress }) =>
+          progress !== t.progress || (t.status === "todo" && progress > 0),
+      );
     if (!updates.length) return;
+    // пошёл прогресс по профилю — задача сама становится «В процессе»
+    const status = (t: StepTask, progress: number) =>
+      t.status === "todo" && progress > 0 ? "in_progress" : t.status;
     await Promise.all(
       updates.map(({ t, progress }) =>
-        supabase.from("tasks").update({ progress }).eq("id", t.id),
+        supabase
+          .from("tasks")
+          .update({ progress, status: status(t, progress) })
+          .eq("id", t.id),
       ),
     );
     stepTasksRef.current = stepTasksRef.current.map((t) => {
       const u = updates.find((x) => x.t.id === t.id);
-      return u ? { ...t, progress: u.progress } : t;
+      return u
+        ? { ...t, progress: u.progress, status: status(t, u.progress) }
+        : t;
     });
     setStepTasks(stepTasksRef.current);
   }, [supabase]);
+
+  // пересчитать прогресс связанных задач при открытии профиля:
+  // данные могли измениться, пока задачи ещё не были связаны с профилем
+  useEffect(() => {
+    if (!missingTables) syncSteps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---------- петля цикла: вернуть закрытые задачи на пересмотр ----------
+  const reviseSteps = useCallback(
+    async (steps: ProfileStep[]) => {
+      const now = new Date().toISOString();
+      const targets = stepTasksRef.current.filter(
+        (t) => steps.includes(t.profile_step) && t.status === "done",
+      );
+      if (!targets.length) return 0;
+      const ids = targets.map((t) => t.id);
+      const ok = await track(
+        supabase
+          .from("tasks")
+          .update({ status: "revisit", counted_from: now, progress: 0 })
+          .in("id", ids),
+      );
+      if (!ok) return 0;
+      stepTasksRef.current = stepTasksRef.current.map((t) =>
+        ids.includes(t.id)
+          ? { ...t, status: "revisit", counted_from: now, progress: 0 }
+          : t,
+      );
+      setStepTasks(stepTasksRef.current);
+      toast(`На пересмотре: ${ids.length}`);
+      return ids.length;
+    },
+    [supabase, track, toast],
+  );
 
   // ---------- кнопка «Сохранить» ----------
   const saveAll = useCallback(async () => {
@@ -384,6 +443,7 @@ export default function ProfileApp({
         "vision",
         "market_size",
         "gtm",
+        "mvp",
       ] as const)
         if (dirtyCols.current.has(col)) row[col] = next[col];
       jobs.push({
@@ -546,7 +606,9 @@ export default function ProfileApp({
     if (!sec) return;
     url.searchParams.delete("sec");
     window.history.replaceState(null, "", url.toString());
-    setTimeout(() => goTo(tab, sec), 100);
+    // вкладка берётся из раздела (старые ссылки могли вести на другую вкладку)
+    const secTab = SECTIONS.find((x) => x.id === sec.split(":")[0])?.tab;
+    setTimeout(() => goTo(secTab ?? tab, sec), 100);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -639,6 +701,9 @@ export default function ProfileApp({
     tasks,
     canLinkTasks: !needsMarket,
     createTask,
+    canMvp: !needsTemplate,
+    stepTasks,
+    reviseSteps,
   };
 
   const removing = items.find((i) => i.id === removeId);
@@ -687,6 +752,7 @@ export default function ProfileApp({
           {TABS.map((t) => (
             <button
               key={t.id}
+              title={t.phase ? `Фаза: ${t.phase}` : undefined}
               onClick={() => goTo(t.id)}
               className={`rounded-[10px] px-3.5 py-2 text-sm font-bold whitespace-nowrap transition ${
                 tab === t.id
@@ -724,12 +790,21 @@ export default function ProfileApp({
             Editor, затем обновите страницу.
           </div>
         )}
-        {tab === "hypotheses" && <Hypotheses ctx={ctx} />}
+        {needsTemplate && !missingTables && (
+          <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
+            Для вкладки «MVP» и пересмотра задач запустите{" "}
+            <b>supabase/migrations/0008_cycle_template.sql</b> в Supabase → SQL
+            Editor, затем обновите страницу.
+          </div>
+        )}
         {tab === "market" && <Market ctx={ctx} />}
-        {tab === "gtm" && <GtmTab ctx={ctx} />}
+        {tab === "hypotheses" && <Hypotheses ctx={ctx} />}
+        {tab === "risks" && <Risks ctx={ctx} />}
         {tab === "economics" && <EconomicsTab ctx={ctx} />}
+        {tab === "mvp" && <MvpTab ctx={ctx} />}
         {tab === "metrics" && <MetricsTab ctx={ctx} />}
-        {tab === "risks" && <RisksDecisions ctx={ctx} />}
+        {tab === "gtm" && <GtmTab ctx={ctx} />}
+        {tab === "decisions" && <Decisions ctx={ctx} />}
       </main>
 
       <ConfirmDialog

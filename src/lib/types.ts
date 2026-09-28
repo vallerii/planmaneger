@@ -31,6 +31,7 @@ export const STATUSES = [
   "todo",
   "in_progress",
   "discuss",
+  "revisit",
   "done",
   "cancelled",
 ] as const;
@@ -55,6 +56,11 @@ export const STATUS_META: Record<
     badge: "bg-[#fff5d8] text-[#6b4c00]",
     dot: "bg-warn",
   },
+  revisit: {
+    label: "На пересмотре",
+    badge: "bg-[#efe9fb] text-[#5b3aa6]",
+    dot: "bg-[#8b6ad8]",
+  },
   done: { label: "Готово", badge: "bg-[#e8f5ef] text-[#0b6b4c]", dot: "bg-ok" },
   cancelled: {
     label: "Отменено",
@@ -76,6 +82,8 @@ export type Task = {
   share_token?: string | null;
   hypothesis_id?: string | null;
   profile_step?: string | null;
+  /** С какого момента задача считает изменения в профиле (миграция 0008). */
+  counted_from?: string | null;
   deadline: string | null;
   position: number;
   comment_count?: number;

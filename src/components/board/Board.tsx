@@ -607,7 +607,7 @@ export default function Board({
       </header>
 
       <main className="px-4 pt-5 pb-10 md:px-6">
-        <div className="mb-4 flex flex-wrap items-center gap-3 text-muted">
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-muted">
           <span>Размер задачи:</span>
           {SIZES.map((k) => (
             <span

@@ -42,7 +42,6 @@ export default function GtmTab({ ctx }: { ctx: ProfileCtx }) {
   }
   return (
     <div className="flex flex-col gap-5">
-      <Journey ctx={ctx} />
       <Channels ctx={ctx} />
       <First100 ctx={ctx} />
     </div>
@@ -51,7 +50,7 @@ export default function GtmTab({ ctx }: { ctx: ProfileCtx }) {
 
 /* ---------------- путь клиента ---------------- */
 
-function Journey({ ctx }: { ctx: ProfileCtx }) {
+export function Journey({ ctx }: { ctx: ProfileCtx }) {
   const { profile, items } = ctx;
   const stages = ctx.byKind("journey");
   const [adding, setAdding] = useState(false);

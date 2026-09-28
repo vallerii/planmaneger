@@ -5,11 +5,14 @@ import {
   IMPACTS,
   KIND_LABEL,
   STATUS,
+  TONE,
+  VERDICTS,
   freshness,
   statusOf,
   type HistoryEntry,
   type ProfileItem,
 } from "@/lib/profile";
+import type { ProfileStep } from "@/lib/steps";
 import { todayISO } from "@/lib/schedule";
 import type { ProfileCtx } from "./ProfileApp";
 import {
@@ -29,21 +32,35 @@ const RISK_TYPES = [
   { value: "question", label: "Вопрос" },
 ];
 
-export default function RisksDecisions({ ctx }: { ctx: ProfileCtx }) {
+/** Какие задачи предложить пересмотреть после решения. */
+const REVISE: Record<string, { steps: ProfileStep[]; text: string }> = {
+  pivot: {
+    steps: [
+      "problems",
+      "icp",
+      "interviews",
+      "discovery_insights",
+      "hypotheses_set",
+      "solution_hyp",
+    ],
+    text: "Разворот обычно означает вернуться к проблемам, ICP, интервью и гипотезам.",
+  },
+  adjust: {
+    steps: ["risks_set", "experiments", "unit_economics", "mvp_scope"],
+    text: "Корректировка обычно означает новые эксперименты, пересчёт экономики или объёма MVP.",
+  },
+};
+
+export function Risks({ ctx }: { ctx: ProfileCtx }) {
   const { profile, items } = ctx;
   const risks = ctx.byKind("risk");
-  const decisions = ctx.byKind("decision");
-  const hypOptions = ctx.byKind("hypothesis").map((h) => ({
-    value: h.id,
-    label: h.title || "Гипотеза без формулировки",
-  }));
 
   return (
     <div className="flex flex-col gap-5">
       <Section
         id="risk"
-        title="Риски и открытые вопросы"
-        desc="Что может помешать продукту и на что у нас пока нет ответа."
+        title="Риски и ключевые допущения"
+        desc="Что может помешать продукту и во что мы верим без доказательств. Самые опасные допущения — первые кандидаты на эксперименты."
         fresh={freshness("risk", profile, items)}
         onReviewed={() => ctx.markReviewed("risk")}
       >
@@ -67,11 +84,24 @@ export default function RisksDecisions({ ctx }: { ctx: ProfileCtx }) {
           + Добавить риск или вопрос
         </AddBtn>
       </Section>
+    </div>
+  );
+}
 
+export function Decisions({ ctx }: { ctx: ProfileCtx }) {
+  const { profile, items } = ctx;
+  const decisions = ctx.byKind("decision");
+  const hypOptions = ctx.byKind("hypothesis").map((h) => ({
+    value: h.id,
+    label: h.title || "Гипотеза без формулировки",
+  }));
+
+  return (
+    <div className="flex flex-col gap-5">
       <Section
         id="decision"
         title="Принятые решения"
-        desc="Что решили, почему и что заставит пересмотреть. Чтобы через месяц не спорить заново."
+        desc="Журнал решений по циклу: итог (Proceed / Adjust / Pivot / Stop), почему и что заставит пересмотреть. Чтобы через месяц не спорить заново."
         fresh={freshness("decision", profile, items)}
         onReviewed={() => ctx.markReviewed("decision")}
       >
@@ -172,6 +202,14 @@ function DecisionCard({
   hypOptions: { value: string; label: string }[];
 }) {
   const set = (data: Record<string, unknown>) => ctx.updateItem(d.id, { data });
+  const verdict = VERDICTS.find((v) => v.value === d.data.verdict);
+  const revise =
+    ctx.canMvp && d.status === "active" ? REVISE[d.data.verdict ?? ""] : undefined;
+  const reviseTasks = revise
+    ? ctx.stepTasks.filter(
+        (t) => revise.steps.includes(t.profile_step) && t.status === "done",
+      )
+    : [];
   return (
     <div
       data-item={d.id}
@@ -203,6 +241,38 @@ function DecisionCard({
         />
         <RemoveBtn onClick={() => ctx.askRemove(d.id)} />
       </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-[240px]">
+          <Pick
+            value={d.data.verdict ?? ""}
+            options={VERDICTS.map((v) => ({ value: v.value, label: v.label }))}
+            onChange={(v) => set({ verdict: v || null })}
+            placeholder="Итог решения"
+          />
+        </div>
+        {verdict && (
+          <span
+            className={`rounded-full px-2.5 py-1 text-xs font-bold ${TONE[verdict.tone].badge}`}
+          >
+            {verdict.hint}
+          </span>
+        )}
+      </div>
+      {revise && reviseTasks.length > 0 && (
+        <div className="mt-3 rounded-[10px] border border-[#d9cdf5] bg-[#f6f2fe] px-3 py-2.5 text-sm text-[#45307e]">
+          <div>{revise.text}</div>
+          <div className="mt-1 text-xs">
+            Закрытые задачи:{" "}
+            {reviseTasks.map((t) => `«${t.name}»`).join(", ")}
+          </div>
+          <button
+            onClick={() => ctx.reviseSteps(revise.steps)}
+            className="mt-2 rounded-lg bg-[#5b3aa6] px-3 py-1.5 text-xs font-bold text-white hover:brightness-110"
+          >
+            ↻ Отправить на пересмотр ({reviseTasks.length})
+          </button>
+        </div>
+      )}
       <div
         className={`mt-3 grid gap-3 ${ctx.canCycle ? "md:grid-cols-4" : "md:grid-cols-3"}`}
       >

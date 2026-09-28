@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import ProfileApp, { type StepTask } from "@/components/profile/ProfileApp";
+import { CYCLE_TEMPLATE } from "@/lib/steps";
 import {
   emptyProfile,
   type HistoryEntry,
@@ -36,8 +37,9 @@ export default async function ProfilePage({
     tasksRes,
     phasesRes,
     econProbe,
-    stepsRes,
+    stepsFirst,
     cycleProbe,
+    mvpProbe,
   ] = await Promise.all([
     supabase
       .from("product_profiles")
@@ -68,15 +70,27 @@ export default async function ProfilePage({
       .order("position"),
     // есть ли колонка economics (миграция 0005)
     supabase.from("product_profiles").select("economics").limit(1),
-    // задачи фазы 0 (миграция 0006)
-    supabase
-      .from("tasks")
-      .select("id,profile_step,status,progress")
-      .eq("project_id", id)
-      .not("profile_step", "is", null),
+    // задачи, связанные с профилем (миграция 0006; counted_from — 0008)
+    selectSteps(supabase, id),
     // есть ли колонки полного цикла (миграция 0007)
     supabase.from("product_profiles").select("vision").limit(1),
+    // шаблон цикла: MVP и пересмотр задач (миграция 0008)
+    supabase.from("product_profiles").select("mvp").limit(1),
   ]);
+  // Задачи шаблона, созданные до миграции 0008, остались без связи с профилем —
+  // привязываем их по названию, чтобы прогресс снова считался из профиля.
+  let stepsRes = stepsFirst;
+  if (!mvpProbe.error) {
+    const linked = await relinkTemplateTasks(supabase, id);
+    if (linked) stepsRes = await selectSteps(supabase, id);
+  }
+  const steps = stepsRes.error
+    ? await supabase
+        .from("tasks")
+        .select("id,name,profile_step,status,progress")
+        .eq("project_id", id)
+        .not("profile_step", "is", null)
+    : stepsRes;
 
   const missingTables =
     !!profileRes.error && profileRes.error.code !== "PGRST116";
@@ -99,9 +113,45 @@ export default async function ProfilePage({
       needsMarket={needsMarket}
       needsEconomics={needsEconomics}
       needsCycle={!missingTables && !!cycleProbe.error}
-      stepTasks={(stepsRes.data ?? []) as StepTask[]}
+      needsTemplate={!missingTables && !!mvpProbe.error}
+      stepTasks={(steps.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}
       phases={(phasesRes.data ?? []) as { id: string; name: string }[]}
     />
   );
+}
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+function selectSteps(supabase: Db, projectId: string) {
+  return supabase
+    .from("tasks")
+    .select("id,name,profile_step,status,progress,counted_from")
+    .eq("project_id", projectId)
+    .not("profile_step", "is", null);
+}
+
+/** Привязать задачи шаблона без profile_step по названию. Вернёт, сколько привязали. */
+async function relinkTemplateTasks(supabase: Db, projectId: string) {
+  const byName = new Map(
+    CYCLE_TEMPLATE.flatMap((ph) => ph.tasks)
+      .filter((t) => t.step)
+      .map((t) => [t.name, t.step!] as const),
+  );
+  const { data } = await supabase
+    .from("tasks")
+    .select("id,name")
+    .eq("project_id", projectId)
+    .is("profile_step", null)
+    .in("name", [...byName.keys()]);
+  if (!data?.length) return 0;
+  const results = await Promise.all(
+    data.map((t) =>
+      supabase
+        .from("tasks")
+        .update({ profile_step: byName.get(t.name) })
+        .eq("id", t.id),
+    ),
+  );
+  return results.filter((r) => !r.error).length;
 }

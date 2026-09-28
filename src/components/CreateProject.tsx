@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Btn, Field, Modal, inputCls } from "./ui";
-import { PHASE0_NAME, STEPS, stepDescription } from "@/lib/steps";
+import { CYCLE_TEMPLATE, stepDescription } from "@/lib/steps";
 import { todayISO } from "@/lib/schedule";
 
 export default function CreateProject() {
@@ -35,31 +35,40 @@ export default function CreateProject() {
       return setError(error?.message ?? "Ошибка");
     }
 
-    // Фаза 0: задачи на заполнение профиля продукта
-    const { data: phase, error: phErr } = await supabase
+    // Шаблон продуктового цикла: 8 фаз, задачи связаны с профилем
+    const { data: phaseRows, error: phErr } = await supabase
       .from("phases")
-      .insert({ project_id: project.id, name: PHASE0_NAME, position: 0 })
-      .select("id")
-      .single();
-    if (phErr || !phase) {
+      .insert(
+        CYCLE_TEMPLATE.map((ph, i) => ({
+          project_id: project.id,
+          name: ph.name,
+          position: i,
+        })),
+      )
+      .select("id,position");
+    if (phErr || !phaseRows) {
       setBusy(false);
       return setError(phErr?.message ?? "Ошибка");
     }
-    const rows = STEPS.map((s, i) => ({
-      project_id: project.id,
-      phase_id: phase.id,
-      name: s.name,
-      size: s.size,
-      description: stepDescription(s.step, project.id),
-      position: i,
-      profile_step: s.step,
-    }));
-    let { error: tErr } = await supabase.from("tasks").insert(rows);
-    // миграция 0006 ещё не применена — создаём задачи без связи с профилем
+    const phaseId = (i: number) => phaseRows.find((p) => p.position === i)!.id;
+    const rows = CYCLE_TEMPLATE.flatMap((ph, i) =>
+      ph.tasks.map((t, k) => ({
+        project_id: project.id,
+        phase_id: phaseId(i),
+        name: t.name,
+        size: t.size,
+        description: stepDescription(t, project.id),
+        position: k,
+        ...(t.step ? { profile_step: t.step } : {}),
+      })),
+    );
+    const { error: tErr } = await supabase.from("tasks").insert(rows);
+    // без миграции 0008 задачи нельзя связать с профилем — не создаём «немые» задачи
     if (tErr && /profile_step/.test(tErr.message)) {
-      ({ error: tErr } = await supabase
-        .from("tasks")
-        .insert(rows.map(({ profile_step: _s, ...r }) => (void _s, r))));
+      setBusy(false);
+      return setError(
+        "Запустите supabase/migrations/0008_cycle_template.sql в Supabase → SQL Editor: без неё задачи не свяжутся с профилем. Проект создан без задач — удалите его и создайте заново.",
+      );
     }
     if (tErr) {
       setBusy(false);
@@ -95,9 +104,10 @@ export default function CreateProject() {
         </Field>
 
         <p className="mb-1 text-sm text-muted">
-          Проект начнётся с фазы «{PHASE0_NAME}»: задачи по заполнению профиля
-          продукта. Остальные фазы добавите на доске, когда будет понятно, что
-          делать.
+          Проект начнётся с полного продуктового цикла:{" "}
+          {CYCLE_TEMPLATE.map((p) => p.name).join(" → ")}. Задачи, связанные с
+          профилем продукта, заполняются сами по мере заполнения профиля. Лишнее
+          можно удалить на доске.
         </p>
 
         {error && <p className="text-sm text-bad">{error}</p>}

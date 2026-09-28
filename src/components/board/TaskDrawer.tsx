@@ -22,6 +22,9 @@ import {
 } from "@/lib/schedule";
 import Link from "next/link";
 import {
+  WAITING,
+  countSince,
+  countedFromPatch,
   stepChecklist,
   stepHref,
   stepProgress,
@@ -269,7 +272,12 @@ export default function TaskDrawer({
           ...((pr.data as Partial<ProductProfile>) ?? {}),
         };
         setCheck(
-          stepChecklist(step, profile, (it.data ?? []) as ProfileItem[]),
+          stepChecklist(
+            step,
+            profile,
+            (it.data ?? []) as ProfileItem[],
+            countSince(task),
+          ),
         );
       } catch {
         if (alive) setCheck([]);
@@ -278,17 +286,23 @@ export default function TaskDrawer({
     return () => {
       alive = false;
     };
-  }, [step, supabase, task.project_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, supabase, task.project_id, task.status, task.counted_from]);
   const stepPct = check ? stepProgress(check) : task.progress;
+  const since = step ? countSince(task) : null;
 
   const setStatus = (status: Status) => {
     if (step) {
-      // закрыли — 100%, открыли снова — прогресс по профилю
-      if (status === "done") onUpdate({ status, progress: 100 });
+      // закрыли — 100%; на пересмотр или повторная задача стартовала — считаем заново;
+      // открыли снова — прогресс по профилю
+      const cf = countedFromPatch(task, status);
+      if (status === "done") onUpdate({ status, progress: 100, ...cf });
+      else if ("counted_from" in cf) onUpdate({ status, progress: 0, ...cf });
       else onUpdate({ status, progress: stepPct });
       return;
     }
     if (status === "done") onUpdate({ status, progress: 100 });
+    else if (status === "revisit") onUpdate({ status, progress: 0 });
     else if (task.status === "done" && task.progress === 100)
       onUpdate({ status, progress: status === "todo" ? 0 : 90 });
     else onUpdate({ status });
@@ -380,7 +394,13 @@ export default function TaskDrawer({
                 value={task.status}
                 onChange={(v: Status) => setStatus(v)}
                 className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
-                options={STATUSES.map((st) => ({
+                // «На пересмотре» — только для уже сделанных задач
+                options={STATUSES.filter(
+                  (st) =>
+                    st !== "revisit" ||
+                    task.status === "done" ||
+                    task.status === "revisit",
+                ).map((st) => ({
                   value: st,
                   label: (
                     <span className="inline-flex items-center gap-2">
@@ -410,7 +430,11 @@ export default function TaskDrawer({
                 <div className="mt-1 text-[11px] text-muted">
                   {task.status === "done"
                     ? "Задача закрыта вручную"
-                    : "До 99% — закройте статусом «Готово», когда решите"}
+                    : since === WAITING
+                      ? "Начнёт считать, когда задача будет взята в работу"
+                      : since
+                        ? `Считает изменения с ${new Date(since).toLocaleDateString("ru-RU")}`
+                        : "До 99% — закройте статусом «Готово», когда решите"}
                 </div>
               </div>
             ) : (
@@ -518,7 +542,7 @@ export default function TaskDrawer({
                   )}
               </div>
             )}
-            {hypotheses && (
+            {hypotheses && !step && (
               <div className={card + " sm:col-span-2"}>
                 <div className="flex items-baseline gap-2">
                   <label className={lbl}>Проверяет гипотезу</label>

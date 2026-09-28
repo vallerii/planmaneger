@@ -155,8 +155,8 @@ function MetricCard({
   );
   const tabOf: Record<string, Tab> = {
     hypothesis: "hypotheses",
-    decision: "risks",
-    journey: "gtm",
+    decision: "decisions",
+    journey: "mvp",
   };
 
   function record() {
