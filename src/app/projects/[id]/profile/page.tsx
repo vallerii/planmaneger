@@ -21,7 +21,7 @@ export default async function ProfilePage({
   const { tab } = await searchParams;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) redirect("/login");
+  if (!auth.user) redirect("/login?expired=1");
 
   const { data: project } = await supabase
     .from("projects")

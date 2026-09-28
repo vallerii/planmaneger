@@ -87,6 +87,8 @@ export type Task = {
   deadline: string | null;
   position: number;
   comment_count?: number;
+  /** непрочитанные мной комментарии (только на клиенте) */
+  unread?: number;
 };
 
 export type Comment = {

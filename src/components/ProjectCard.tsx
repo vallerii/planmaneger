@@ -14,6 +14,8 @@ export type ProjectCardData = {
   tasks: number;
   members: number;
   isOwner: boolean;
+  /** непрочитанные мной комментарии */
+  unread?: number;
 };
 
 export default function ProjectCard({ p }: { p: ProjectCardData }) {
@@ -47,8 +49,15 @@ export default function ProjectCard({ p }: { p: ProjectCardData }) {
         <div
           className={`flex items-start justify-between gap-2 ${p.isOwner ? "pr-8" : ""}`}
         >
-          <h2 className="text-lg font-extrabold tracking-tight group-hover:text-accent">
+          <h2 className="flex items-center gap-2 text-lg font-extrabold tracking-tight group-hover:text-accent">
             {p.name}
+            {!!p.unread && (
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full bg-bad"
+                title={`Новых комментариев: ${p.unread}`}
+                aria-label={`Новых комментариев: ${p.unread}`}
+              />
+            )}
           </h2>
           {!p.isOwner && (
             <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">

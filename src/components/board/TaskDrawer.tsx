@@ -59,6 +59,8 @@ type Props = {
   mode?: "edit" | "create";
   onCreate?: (fields: { name: string; description: string }) => void;
   onDelete?: () => void;
+  /** комментарии, которые были для меня новыми, — подсветить */
+  freshCommentIds?: Set<string>;
 };
 
 const commentTime = new Intl.DateTimeFormat("ru-RU", {
@@ -83,6 +85,7 @@ export default function TaskDrawer({
   mode = "edit",
   onCreate,
   onDelete,
+  freshCommentIds,
 }: Props) {
   const isCreate = mode === "create";
   const supabase = useMemo(() => createClient(), []);
@@ -188,9 +191,32 @@ export default function TaskDrawer({
           );
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+          console.warn("[realtime] комментарии:", status, err?.message ?? "");
+        else console.info("[realtime] комментарии:", status);
+      });
+
+    // страховка: если веб-сокет отвалился — подтянуть при возврате и раз в 30 с
+    const refetch = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data } = await supabase
+        .from("comments")
+        .select(
+          "id,task_id,author_id,body,created_at, author:profiles(full_name,email)",
+        )
+        .eq("task_id", task.id)
+        .order("created_at");
+      if (alive && data) setComments(data as unknown as Comment[]);
+    };
+    const iv = setInterval(refetch, 30_000);
+    document.addEventListener("visibilitychange", refetch);
+    window.addEventListener("focus", refetch);
     return () => {
       alive = false;
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", refetch);
+      window.removeEventListener("focus", refetch);
       supabase.removeChannel(ch);
     };
   }, [supabase, task.id, onError, nameOf, isCreate]);
@@ -597,10 +623,16 @@ export default function TaskDrawer({
                 comments.map((c) => {
                   const author =
                     c.author?.full_name || c.author?.email || "Пользователь";
+                  const fresh =
+                    !!freshCommentIds?.has(c.id) && c.author_id !== me.id;
                   return (
                     <div
                       key={c.id}
-                      className="group grid grid-cols-[34px_1fr] gap-2.5 border-b border-[#efede6] py-[11px]"
+                      className={`group grid grid-cols-[34px_1fr] gap-2.5 border-b border-[#efede6] py-[11px] ${
+                        fresh
+                          ? "-mx-2 rounded-lg border-l-[3px] border-l-bad bg-[#fff6f4] px-2"
+                          : ""
+                      }`}
                     >
                       <div className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-ink text-[11px] font-black text-white">
                         {initials(author)}
@@ -611,6 +643,11 @@ export default function TaskDrawer({
                           <time className="text-[10px] text-[#999]">
                             {commentTime.format(new Date(c.created_at))}
                           </time>
+                          {fresh && (
+                            <span className="rounded-full bg-bad px-1.5 text-[10px] leading-4 font-black text-white">
+                              новое
+                            </span>
+                          )}
                           {c.author_id === me.id && (
                             <button
                               onClick={() => deleteComment(c.id)}

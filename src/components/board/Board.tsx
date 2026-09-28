@@ -51,6 +51,8 @@ import {
 import PhaseColumn from "./PhaseColumn";
 import { TaskCardView } from "./TaskCard";
 import TaskDrawer from "./TaskDrawer";
+import CommentsBell from "./CommentsBell";
+import { useUnreadComments } from "@/lib/unread";
 import MembersModal from "./MembersModal";
 import ProjectTitle from "./ProjectTitle";
 import ProjectNav from "../ProjectNav";
@@ -111,6 +113,28 @@ export default function Board({
   }, [dragging]);
   const lastDragEnd = useRef(0);
 
+  // ---------- непрочитанные комментарии ----------
+  const unread = useUnreadComments(supabase, project.id);
+  const markReadRef = useRef(unread.markRead);
+  const reloadUnreadRef = useRef(unread.reload);
+  useEffect(() => {
+    markReadRef.current = unread.markRead;
+    reloadUnreadRef.current = unread.reload;
+  });
+  const activeTaskRef = useRef(activeTaskId);
+  /** комментарии, которые были новыми, когда открыли задачу, — подсвечиваем */
+  const [fresh, setFresh] = useState<{ task: string | null; ids: Set<string> }>(
+    () => ({ task: null, ids: new Set() }),
+  );
+  useEffect(() => {
+    activeTaskRef.current = activeTaskId;
+    if (!activeTaskId) return;
+    // открыл задачу — прочитал
+    markReadRef
+      .current([activeTaskId])
+      .then((ids) => setFresh({ task: activeTaskId, ids }));
+  }, [activeTaskId]);
+
   const sd = project.size_days;
   const isOwner = project.owner_id === me.id;
 
@@ -130,10 +154,11 @@ export default function Board({
   const columns = useMemo(() => {
     const map: Record<string, Task[]> = {};
     for (const p of phases) map[p.id] = [];
-    for (const t of tasks) (map[t.phase_id] ??= []).push(t);
+    for (const t of tasks)
+      (map[t.phase_id] ??= []).push({ ...t, unread: unread.byTask[t.id] ?? 0 });
     for (const k in map) map[k].sort(byPos);
     return map;
-  }, [phases, tasks]);
+  }, [phases, tasks, unread.byTask]);
 
   const schedule = useMemo(
     () => buildSchedule(project.start_date, phases, columns, sd),
@@ -239,8 +264,20 @@ export default function Board({
           filter: `project_id=eq.${project.id}`,
         },
         (payload) => {
-          const row = payload.new as { task_id: string; author_id: string };
+          const row = payload.new as {
+            id: string;
+            task_id: string;
+            author_id: string;
+          };
           if (row.author_id === me.id) return; // свои учитываем сразу
+          if (row.task_id === activeTaskRef.current) {
+            // задача открыта — комментарий сразу прочитан, но подсвечен
+            markReadRef.current([row.task_id]);
+            setFresh((f) => ({
+              task: row.task_id,
+              ids: new Set(f.task === row.task_id ? f.ids : []).add(row.id),
+            }));
+          } else reloadUnreadRef.current();
           setTasks((ts) =>
             ts.map((t) =>
               t.id === row.task_id
@@ -250,11 +287,53 @@ export default function Board({
           );
         },
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        // помогает понять, почему не приходят обновления
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT")
+          console.warn("[realtime] доска:", status, err?.message ?? "");
+        else console.info("[realtime] доска:", status);
+      });
     return () => {
       supabase.removeChannel(ch);
     };
   }, [supabase, project.id, me.id]);
+
+  // Страховка, если веб-сокет молча отвалился (сон, смена сети):
+  // при возврате на вкладку и раз в минуту подтягиваем счётчики комментариев.
+  useEffect(() => {
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      reloadUnreadRef.current();
+      const { data } = await supabase
+        .from("tasks")
+        .select("id, comments(count)")
+        .eq("project_id", project.id);
+      if (!data) return;
+      const counts = new Map(
+        data.map((r) => [
+          r.id as string,
+          Array.isArray(r.comments) && r.comments[0]
+            ? (r.comments[0] as { count: number }).count
+            : 0,
+        ]),
+      );
+      setTasks((ts) =>
+        ts.map((t) =>
+          counts.has(t.id) && counts.get(t.id) !== t.comment_count
+            ? { ...t, comment_count: counts.get(t.id) }
+            : t,
+        ),
+      );
+    };
+    const iv = setInterval(refresh, 60_000);
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(iv);
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [supabase, project.id]);
 
   // ---------- project ----------
   async function updateProject(patch: Partial<Project>) {
@@ -365,8 +444,9 @@ export default function Board({
   const updateTask = useCallback(
     async (id: string, patch: Partial<Task>) => {
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-      const { comment_count: _c, ...dbPatch } = patch;
+      const { comment_count: _c, unread: _u, ...dbPatch } = patch;
       void _c;
+      void _u;
       if (Object.keys(dbPatch).length)
         fail((await supabase.from("tasks").update(dbPatch).eq("id", id)).error);
     },
@@ -575,6 +655,18 @@ export default function Board({
             </Btn>
             <Btn onClick={() => setModal("settings")}>⚙ Настройки</Btn>
             <Btn onClick={() => setModal("members")}>👥 {members.length}</Btn>
+            {unread.enabled && (
+              <CommentsBell
+                list={unread.list}
+                onOpenTask={(id) => {
+                  setDraftTask(null);
+                  setActiveTaskId(id);
+                }}
+                onReadAll={() =>
+                  unread.markRead([...new Set(unread.list.map((c) => c.task_id))])
+                }
+              />
+            )}
             <Btn onClick={exportJson}>Экспорт JSON</Btn>
             <Btn variant="primary" onClick={() => setModal("phase")}>
               ＋ Фаза
@@ -714,6 +806,7 @@ export default function Board({
           members={members}
           projectId={project.id}
           hypotheses={hypotheses}
+          freshCommentIds={fresh.task === activeTask.id ? fresh.ids : undefined}
           onClose={() => setActiveTaskId(null)}
           onUpdate={(patch) => updateTask(activeTask.id, patch)}
           onDelete={() => setConfirmTask(activeTask.id)}

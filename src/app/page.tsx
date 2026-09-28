@@ -4,13 +4,14 @@ import { Brand } from "@/components/ui";
 import UserMenu from "@/components/UserMenu";
 import CreateProject from "@/components/CreateProject";
 import ProjectCard from "@/components/ProjectCard";
+import RefreshOnFocus from "@/components/RefreshOnFocus";
 
 export default async function Home() {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) redirect("/login");
+  if (!auth.user) redirect("/login?expired=1");
 
-  const [{ data: profile }, { data: projects }] = await Promise.all([
+  const [{ data: profile }, { data: projects }, unreadRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name,email")
@@ -22,13 +23,21 @@ export default async function Home() {
         "id,name,start_date,owner_id,created_at,phases(count),tasks(count),project_members(count)",
       )
       .order("created_at", { ascending: false }),
+    // непрочитанные комментарии по проектам (миграция 0009; без неё — просто пусто)
+    supabase.rpc("my_unread_projects"),
   ]);
+  const unread = new Map<string, number>(
+    ((unreadRes.data ?? []) as { project_id: string; unread: number }[]).map(
+      (r) => [r.project_id, r.unread],
+    ),
+  );
 
   const count = (x: unknown) =>
     Array.isArray(x) && x[0] ? (x[0] as { count: number }).count : 0;
 
   return (
     <div className="min-h-screen">
+      <RefreshOnFocus />
       <header className="sticky top-0 z-10 border-b border-line bg-bg/90 px-4 py-4 backdrop-blur md:px-6">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
           <Brand />
@@ -68,6 +77,7 @@ export default async function Home() {
                   tasks: count(p.tasks),
                   members: count(p.project_members),
                   isOwner: p.owner_id === auth.user!.id,
+                  unread: unread.get(p.id) ?? 0,
                 }}
               />
             ))}

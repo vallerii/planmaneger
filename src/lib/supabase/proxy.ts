@@ -39,6 +39,13 @@ export async function updateSession(request: NextRequest) {
     url.searchParams.set("next", path);
     return NextResponse.redirect(url);
   }
+  // Страница увидела, что сессия недействительна (getUser не прошёл), а токен
+  // в cookie ещё выглядит живым. Чистим cookie и показываем вход — иначе
+  // «/» → «/login» → «/» зацикливается (ERR_TOO_MANY_REDIRECTS).
+  if (path === "/login" && request.nextUrl.searchParams.has("expired")) {
+    if (user) await supabase.auth.signOut({ scope: "local" });
+    return response;
+  }
   if (user && path === "/login") {
     const next = request.nextUrl.searchParams.get("next") || "/";
     const url = request.nextUrl.clone();
