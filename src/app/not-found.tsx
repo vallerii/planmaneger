@@ -1,17 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Brand } from "@/components/ui";
+import { getI18n } from "@/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Страница не найдена · Planmaneger",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: `${t("Страница не найдена")} · Planmaneger` };
+}
 
 /** 404: несуществующий адрес, удалённый проект или нет доступа к нему. */
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await getI18n();
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line px-4 py-4 md:px-6">
-        <Link href="/" className="inline-block" title="Все проекты">
+        <Link href="/" className="inline-block" title={t("Все проекты")}>
           <Brand />
         </Link>
       </header>
@@ -35,12 +38,10 @@ export default function NotFound() {
           </div>
 
           <h1 className="text-3xl font-extrabold tracking-tight">
-            Такой страницы нет
+            {t("Такой страницы нет")}
           </h1>
           <p className="mt-3 text-[15px] leading-relaxed text-muted">
-            Возможно, ссылка устарела, проект или задачу удалили, или у вас нет
-            к ним доступа. Если вам прислали ссылку — попросите владельца
-            проекта пригласить вас.
+            {t("Возможно, ссылка устарела, проект или задачу удалили, или у вас нет к ним доступа. Если вам прислали ссылку — попросите владельца проекта пригласить вас.")}
           </p>
 
           <div className="mt-8 flex flex-wrap justify-center gap-2">
@@ -48,7 +49,7 @@ export default function NotFound() {
               href="/"
               className="inline-flex items-center justify-center rounded-[11px] border border-ink bg-ink px-4 py-2 font-bold text-white transition hover:-translate-y-px hover:shadow-soft"
             >
-              К моим проектам
+              {t("К моим проектам")}
             </Link>
           </div>
         </div>

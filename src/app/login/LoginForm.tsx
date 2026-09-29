@@ -1,14 +1,17 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Brand, Btn, Field, inputCls } from "@/components/ui";
+import LangSwitcher from "@/components/LangSwitcher";
 
 // Вход через Google временно скрыт. Чтобы включить — настройте провайдера в Supabase и поставьте true.
 const GOOGLE_ENABLED = false;
 
 export default function LoginForm() {
+  const { t, rich } = useI18n();
   const router = useRouter();
   const params = useSearchParams();
   const rawNext = params.get("next") || "/";
@@ -26,7 +29,7 @@ export default function LoginForm() {
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(
-    params.get("error") ? "Не удалось войти. Попробуйте ещё раз." : null,
+    params.get("error") ? t("Не удалось войти. Попробуйте ещё раз.") : null,
   );
   const [info, setInfo] = useState<string | null>(null);
 
@@ -48,7 +51,7 @@ export default function LoginForm() {
       if (error)
         return setError(
           error.message === "Invalid login credentials"
-            ? "Неверный email или пароль"
+            ? t("Неверный email или пароль")
             : error.message,
         );
       router.replace(next);
@@ -66,7 +69,7 @@ export default function LoginForm() {
         router.refresh();
       } else {
         setInfo(
-          "Мы отправили письмо для подтверждения. Перейдите по ссылке из письма, чтобы войти.",
+          t("Мы отправили письмо для подтверждения. Перейдите по ссылке из письма, чтобы войти."),
         );
       }
     }
@@ -83,27 +86,27 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-[420px] rounded-[18px] border border-line bg-white p-6 shadow-soft">
-      <Brand />
+      <div className="flex items-center justify-between gap-3">
+        <Brand />
+        <LangSwitcher />
+      </div>
       {isInvite && (
         <div className="mt-5 rounded-xl border border-[#cfe6db] bg-[#eef7f2] px-3.5 py-3 text-sm text-[#0b5a40]">
-          Вас пригласили в проект
-          {invitedProject ? (
-            <>
-              {" "}
-              «<b>{invitedProject}</b>»
-            </>
-          ) : null}
-          .{" "}
+          {invitedProject
+            ? rich("Вас пригласили в проект «{name}».", {
+                name: <b>{invitedProject}</b>,
+              })
+            : t("Вас пригласили в проект.")}{" "}
           {mode === "signup"
-            ? "Зарегистрируйтесь с этим email — проект откроется сразу после входа."
-            : "Войдите с этим email — проект появится в вашем списке."}
+            ? t("Зарегистрируйтесь с этим email — проект откроется сразу после входа.")
+            : t("Войдите с этим email — проект появится в вашем списке.")}
         </div>
       )}
       <h1 className="mt-5 text-2xl font-extrabold tracking-tight">
-        {mode === "signin" ? "Вход" : "Регистрация"}
+        {mode === "signin" ? t("Вход") : t("Регистрация")}
       </h1>
       <p className="mt-1 text-muted">
-        Планирование проектов по фазам и задачам
+        {t("Планирование проектов по фазам и задачам")}
       </p>
 
       {GOOGLE_ENABLED && (
@@ -127,11 +130,11 @@ export default function LoginForm() {
                 d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"
               />
             </svg>
-            Продолжить с Google
+            {t("Продолжить с Google")}
           </Btn>
 
           <div className="my-4 flex items-center gap-3 text-xs text-muted">
-            <span className="h-px flex-1 bg-line" /> или по email{" "}
+            <span className="h-px flex-1 bg-line" /> {t("или по email")}{" "}
             <span className="h-px flex-1 bg-line" />
           </div>
         </>
@@ -140,12 +143,12 @@ export default function LoginForm() {
 
       <form onSubmit={submit}>
         {mode === "signup" && (
-          <Field label="Имя">
+          <Field label={t("Имя")}>
             <input
               className={inputCls}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Как вас называть"
+              placeholder={t("Как вас называть")}
             />
           </Field>
         )}
@@ -159,7 +162,7 @@ export default function LoginForm() {
             autoComplete="email"
           />
         </Field>
-        <Field label="Пароль">
+        <Field label={t("Пароль")}>
           <input
             className={inputCls}
             type="password"
@@ -188,12 +191,12 @@ export default function LoginForm() {
           disabled={loading}
           className="mt-4 w-full py-2.5"
         >
-          {loading ? "…" : mode === "signin" ? "Войти" : "Создать аккаунт"}
+          {loading ? "…" : mode === "signin" ? t("Войти") : t("Создать аккаунт")}
         </Btn>
       </form>
 
       <p className="mt-4 text-center text-sm text-muted">
-        {mode === "signin" ? "Нет аккаунта?" : "Уже есть аккаунт?"}{" "}
+        {mode === "signin" ? t("Нет аккаунта?") : t("Уже есть аккаунт?")}{" "}
         <button
           className="font-bold text-ink underline"
           onClick={() => {
@@ -202,7 +205,7 @@ export default function LoginForm() {
             setInfo(null);
           }}
         >
-          {mode === "signin" ? "Зарегистрироваться" : "Войти"}
+          {mode === "signin" ? t("Зарегистрироваться") : t("Войти")}
         </button>
       </p>
     </div>

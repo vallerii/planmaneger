@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -8,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { taskStepProgress, type ProfileStep } from "@/lib/steps";
 import ProjectTitle from "../board/ProjectTitle";
 import ProjectNav from "../ProjectNav";
+import LangSwitcher from "../LangSwitcher";
 import {
   DEFAULT_STATUS,
   KIND_LABEL,
@@ -147,6 +149,7 @@ export default function ProfileApp({
   phases?: { id: string; name: string }[];
   stepTasks?: StepTask[];
 }) {
+  const { t, rich, lang } = useI18n();
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [name, setName] = useState(project.name);
@@ -192,10 +195,10 @@ export default function ProfileApp({
       setPending((n) => n + 1);
       const { error } = await p;
       setPending((n) => n - 1);
-      if (error) toast("Ошибка сохранения: " + error.message);
+      if (error) toast(t("Ошибка сохранения:") + " " + error.message);
       return !error;
     },
-    [toast],
+    [toast, t],
   );
 
   const reloadHistory = useCallback(async () => {
@@ -278,9 +281,9 @@ export default function ProfileApp({
           [sec]: new Date().toISOString(),
         },
       });
-      toast("Отмечено как актуальное");
+      toast(t("Отмечено как актуальное"));
     },
-    [writeProfileNow, toast],
+    [writeProfileNow, toast, t],
   );
 
   // ---------- записи ----------
@@ -309,7 +312,7 @@ export default function ProfileApp({
         .select()
         .single();
       setPending((n) => n - 1);
-      if (error) return toast("Ошибка: " + error.message);
+      if (error) return toast(t("Ошибка:") + " " + error.message);
       setItems((xs) => [...xs, row as ProfileItem]);
       reloadHistory();
       if (opts.focus === false) return;
@@ -322,7 +325,7 @@ export default function ProfileApp({
         el?.scrollIntoView({ block: "center", behavior: "smooth" });
       }, 60);
     },
-    [supabase, project.id, toast, reloadHistory, setItems],
+    [supabase, project.id, toast, reloadHistory, setItems, t],
   );
 
   const updateItem = useCallback(
@@ -411,10 +414,10 @@ export default function ProfileApp({
           : t,
       );
       setStepTasks(stepTasksRef.current);
-      toast(`На пересмотре: ${ids.length}`);
+      toast(t("На пересмотре: {n}", { n: ids.length }));
       return ids.length;
     },
-    [supabase, track, toast],
+    [supabase, track, toast, t],
   );
 
   // ---------- кнопка «Сохранить» ----------
@@ -488,10 +491,10 @@ export default function ProfileApp({
     markDirty();
     setSaving(false);
     if (firstError) {
-      toast("Не удалось сохранить: " + firstError);
+      toast(t("Не удалось сохранить:") + " " + firstError);
       return false;
     }
-    toast("Сохранено ✓");
+    toast(t("Сохранено ✓"));
     reloadHistory();
     syncSteps();
     return true;
@@ -503,6 +506,7 @@ export default function ProfileApp({
     toast,
     reloadHistory,
     syncSteps,
+    t,
   ]);
 
   async function removeItem(id: string) {
@@ -565,14 +569,14 @@ export default function ProfileApp({
         .single();
       setPending((n) => n - 1);
       if (error) {
-        toast("Ошибка: " + error.message);
+        toast(t("Ошибка:") + " " + error.message);
         return false;
       }
       setTasks((xs) => [...xs, row as LinkedTask]);
-      toast("Задача добавлена на доску");
+      toast(t("Задача добавлена на доску"));
       return true;
     },
-    [supabase, project.id, toast],
+    [supabase, project.id, toast, t],
   );
 
   const [focus, setFocus] = useState<string | null>(null);
@@ -721,7 +725,7 @@ export default function ProfileApp({
       <header className="z-10 border-b border-line bg-bg/90 px-3.5 py-4 backdrop-blur md:sticky md:top-0 md:px-6">
         <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
           <div className="flex min-w-0 basis-full items-center gap-3 md:flex-1 md:basis-0 md:gap-4">
-            <Link href="/" className="shrink-0" title="Все проекты">
+            <Link href="/" className="shrink-0" title={t("Все проекты")}>
               <Brand />
             </Link>
             <ProjectTitle
@@ -736,43 +740,44 @@ export default function ProfileApp({
             />
           </div>
           <ProjectNav projectId={project.id} active="profile" />
-          <div className="flex shrink-0 justify-end md:flex-1 md:basis-0">
+          <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1 md:basis-0">
+            <LangSwitcher />
             {readOnly ? (
               <span
                 className="rounded-[10px] bg-[#e6effc] px-3.5 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
-                title="Вы можете смотреть профиль, но не менять его"
+                title={t("Вы можете смотреть профиль, но не менять его")}
               >
-                👁 Только просмотр
+                {t("👁 Только просмотр")}
               </span>
             ) : (
             <button
               onClick={() => saveAll()}
               disabled={!dirtyCount || saving}
-              title="Сохранить изменения (Ctrl+S)"
+              title={t("Сохранить изменения (Ctrl+S)")}
               className={`rounded-[10px] px-3.5 py-2 text-sm font-bold whitespace-nowrap transition ${
                 dirtyCount
                   ? "bg-accent text-white shadow-[0_2px_10px_rgba(255,90,54,.3)] hover:brightness-105"
                   : "text-muted"
               } disabled:cursor-default`}
             >
-              {saving ? "Сохраняю…" : dirtyCount ? "Сохранить" : "Сохранено ✓"}
+              {saving ? t("Сохраняю…") : dirtyCount ? t("Сохранить") : t("Сохранено ✓")}
             </button>
             )}
           </div>
         </div>
         <div className="mt-4 flex gap-1 overflow-x-auto">
-          {TABS.map((t) => (
+          {TABS.map((x) => (
             <button
-              key={t.id}
-              title={t.phase ? `Фаза: ${t.phase}` : undefined}
-              onClick={() => goTo(t.id)}
+              key={x.id}
+              title={x.phase ? `${t("Фаза:")} ${x.phase}` : undefined}
+              onClick={() => goTo(x.id)}
               className={`rounded-[10px] px-3.5 py-2 text-sm font-bold whitespace-nowrap transition ${
-                tab === t.id
+                tab === x.id
                   ? "bg-ink text-white"
                   : "text-muted hover:bg-white hover:text-ink"
               }`}
             >
-              {t.label}
+              {t(x.label)}
             </button>
           ))}
         </div>
@@ -783,32 +788,32 @@ export default function ProfileApp({
         <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
         {missingTables && (
           <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
-            В базе ещё нет таблиц профиля. Запустите{" "}
-            <b>supabase/migrations/0003_product_profile.sql</b> в Supabase → SQL
-            Editor, затем обновите страницу.
+            {t("В базе ещё нет таблиц профиля. Запустите {file} в Supabase → SQL Editor, затем обновите страницу.", {
+              file: "supabase/migrations/0003_product_profile.sql",
+            })}
           </div>
         )}
         {tab === "overview" && <Overview ctx={ctx} />}
         {tab === "foundation" && <Foundation ctx={ctx} />}
         {needsMarket && !missingTables && (
           <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
-            Для вкладки «Рынок» и связи гипотез с задачами запустите{" "}
-            <b>supabase/migrations/0004_market_links.sql</b> в Supabase → SQL
-            Editor, затем обновите страницу.
+            {t("Для вкладки «Рынок» и связи гипотез с задачами запустите {file} в Supabase → SQL Editor, затем обновите страницу.", {
+              file: "supabase/migrations/0004_market_links.sql",
+            })}
           </div>
         )}
         {needsCycle && !missingTables && (
           <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
-            Для метрик, выхода на рынок, видения и размера рынка запустите{" "}
-            <b>supabase/migrations/0007_product_cycle.sql</b> в Supabase → SQL
-            Editor, затем обновите страницу.
+            {t("Для метрик, выхода на рынок, видения и размера рынка запустите {file} в Supabase → SQL Editor, затем обновите страницу.", {
+              file: "supabase/migrations/0007_product_cycle.sql",
+            })}
           </div>
         )}
         {needsTemplate && !missingTables && (
           <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
-            Для вкладки «MVP» и пересмотра задач запустите{" "}
-            <b>supabase/migrations/0008_cycle_template.sql</b> в Supabase → SQL
-            Editor, затем обновите страницу.
+            {t("Для вкладки «MVP» и пересмотра задач запустите {file} в Supabase → SQL Editor, затем обновите страницу.", {
+              file: "supabase/migrations/0008_cycle_template.sql",
+            })}
           </div>
         )}
         {tab === "market" && <Market ctx={ctx} />}
@@ -824,24 +829,25 @@ export default function ProfileApp({
 
       <ConfirmDialog
         open={!!removeId}
-        title={`Удалить: ${removing ? KIND_LABEL[removing.kind].toLowerCase() : ""}?`}
+        title={`${t("Удалить:")} ${removing ? (lang === "de" ? t(KIND_LABEL[removing.kind]) : t(KIND_LABEL[removing.kind]).toLowerCase()) : ""}?`}
         onClose={() => setRemoveId(null)}
         onConfirm={() => removeId && removeItem(removeId)}
       >
-        «<b>{removing?.title || "без названия"}</b>» будет удалено. В истории
-        останется запись об удалении.
+        {rich("«{name}» будет удалено. В истории останется запись об удалении.", {
+          name: <b>{removing?.title || t("без названия")}</b>,
+        })}
       </ConfirmDialog>
       <Modal
         open={!!leaveTo}
         onClose={() => setLeaveTo(null)}
-        title="Есть несохранённые изменения"
+        title={t("Есть несохранённые изменения")}
         width={460}
       >
         <p className="text-[15px] leading-relaxed text-[#45443e]">
-          Сохранить их перед переходом?
+          {t("Сохранить их перед переходом?")}
         </p>
         <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <Btn onClick={() => setLeaveTo(null)}>Отмена</Btn>
+          <Btn onClick={() => setLeaveTo(null)}>{t("Отмена")}</Btn>
           <Btn
             onClick={() => {
               const to = leaveTo!;
@@ -852,7 +858,7 @@ export default function ProfileApp({
               router.push(to);
             }}
           >
-            Не сохранять
+            {t("Не сохранять")}
           </Btn>
           <Btn
             variant="primary"
@@ -864,7 +870,7 @@ export default function ProfileApp({
               }
             }}
           >
-            Сохранить и перейти
+            {t("Сохранить и перейти")}
           </Btn>
         </div>
       </Modal>

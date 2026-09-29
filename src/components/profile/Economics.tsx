@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useState } from "react";
 import { STATUS, freshness, type ProfileItem } from "@/lib/profile";
 import {
@@ -30,14 +31,16 @@ import {
 import ForecastChart from "./ForecastChart";
 
 export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const [showTable, setShowTable] = useState(false);
 
   if (!ctx.canEconomics) {
     return (
       <Empty>
-        Вкладка «Экономика» заработает после запуска{" "}
-        <b>supabase/migrations/0005_economics.sql</b> в Supabase → SQL Editor.
+        {t("Вкладка «Экономика» заработает после запуска {file} в Supabase → SQL Editor.", {
+          file: "supabase/migrations/0005_economics.sql",
+        })}
       </Empty>
     );
   }
@@ -72,17 +75,16 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm text-muted">
-          Грубая модель, чтобы понять: сходится ли экономика и сколько денег
-          нужно до выхода в плюс. Все цифры — до налогов.
+          {t("Грубая модель, чтобы понять: сходится ли экономика и сколько денег нужно до выхода в плюс. Все цифры — до налогов.")}
         </p>
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-muted">Валюта</span>
+          <span className="text-xs font-bold text-muted">{t("Валюта")}</span>
           <div className="w-[140px]">
             <Select
               value={cur}
               onChange={(v: Currency) => ctx.patchEconomics({ currency: v })}
               className="!h-[36px] !rounded-lg !border-0 !bg-white text-sm"
-              options={CURRENCIES}
+              options={CURRENCIES.map((c) => ({ ...c, label: t(c.label) }))}
             />
           </div>
         </div>
@@ -91,14 +93,14 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
       {/* ПРОДУКТЫ */}
       <Section
         id="product"
-        title="Продукты и юнит-экономика"
-        desc="Что продаём, сколько стоит одна продажа и сколько на ней зарабатываем."
+        title={t("Продукты и юнит-экономика")}
+        desc={t("Что продаём, сколько стоит одна продажа и сколько на ней зарабатываем.")}
         fresh={freshness("product", profile, items)}
         onReviewed={() => ctx.markReviewed("product")}
       >
         {products.length === 0 ? (
           <Empty>
-            Добавьте продукт или тариф: подписку или разовую продажу.
+            {t("Добавьте продукт или тариф: подписку или разовую продажу.")}
           </Empty>
         ) : (
           <div className="flex flex-col gap-3">
@@ -116,8 +118,9 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
         )}
         {inPlan.length > 1 && Math.round(fc.mixTotal) !== 100 && (
           <p className="mt-3 text-xs text-muted">
-            Сумма долей продаж — {Math.round(fc.mixTotal)}%. В расчёте доли
-            автоматически приводятся к 100%.
+            {t("Сумма долей продаж — {n}%. В расчёте доли автоматически приводятся к 100%.", {
+              n: Math.round(fc.mixTotal),
+            })}
           </p>
         )}
         <AddBtn
@@ -128,41 +131,41 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
             })
           }
         >
-          + Добавить продукт
+          {t("+ Добавить продукт")}
         </AddBtn>
       </Section>
 
       {/* ПЛАН */}
       <Section
         id="plan"
-        title="Финансовый план"
-        desc="Сколько новых продаж в месяц и постоянных расходов на старте, и как они растут от квартала к кварталу."
+        title={t("Финансовый план")}
+        desc={t("Сколько новых продаж в месяц и постоянных расходов на старте, и как они растут от квартала к кварталу.")}
         fresh={freshness("plan", profile, items)}
         onReviewed={() => ctx.markReviewed("plan")}
       >
         <div className="grid gap-3 md:grid-cols-[auto_1fr_1fr]">
           <div>
-            <Label>Горизонт</Label>
+            <Label>{t("Горизонт")}</Label>
             <Segmented<Horizon>
               value={horizon}
               onChange={(v) => ctx.patchEconomics({ horizon: v })}
               options={[
-                { value: 12, label: "12 мес." },
-                { value: 24, label: "24 мес." },
-                { value: 36, label: "36 мес." },
+                { value: 12, label: `12 ${t("мес.")}` },
+                { value: 24, label: `24 ${t("мес.")}` },
+                { value: 36, label: `36 ${t("мес.")}` },
               ]}
             />
           </div>
           <div>
-            <Label>Новых продаж в месяц</Label>
+            <Label>{t("Новых продаж в месяц")}</Label>
             <NumField
               value={e.base_sales}
               onSave={(v) => ctx.patchEconomics({ base_sales: v })}
-              suffix="шт."
+              suffix={t("шт.")}
             />
           </div>
           <div>
-            <Label>Постоянные расходы в месяц</Label>
+            <Label>{t("Постоянные расходы в месяц")}</Label>
             <NumField
               value={e.base_fixed}
               onSave={(v) => ctx.patchEconomics({ base_fixed: v })}
@@ -174,9 +177,9 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
         <div className="mt-5">
           <div className="mb-2 flex flex-wrap items-baseline gap-2">
             <span className="text-sm font-extrabold">
-              Рост к предыдущему кварталу
+              {t("Рост к предыдущему кварталу")}
             </span>
-            <span className="text-xs text-muted">Q1 — база из полей выше</span>
+            <span className="text-xs text-muted">{t("Q1 — база из полей выше")}</span>
             {quarters.length > 1 && (
               <button
                 onClick={() => {
@@ -187,7 +190,7 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
                 }}
                 className="ml-auto text-xs font-bold text-muted hover:text-ink"
               >
-                Как в Q2 для всех
+                {t("Как в Q2 для всех")}
               </button>
             )}
           </div>
@@ -195,13 +198,13 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
             {quarters.map((q, i) => (
               <div key={i} className="rounded-[11px] border border-line p-2.5">
                 <div className="mb-1.5 text-xs font-extrabold">Q{i + 2}</div>
-                <div className="text-[11px] text-muted">продажи</div>
+                <div className="text-[11px] text-muted">{t("продажи")}</div>
                 <NumField
                   value={q.sales}
                   onSave={(v) => setQuarter(i, { sales: v })}
                   suffix="%"
                 />
-                <div className="mt-1.5 text-[11px] text-muted">расходы</div>
+                <div className="mt-1.5 text-[11px] text-muted">{t("расходы")}</div>
                 <NumField
                   value={q.cost}
                   onSave={(v) => setQuarter(i, { cost: v })}
@@ -217,67 +220,69 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
       <div className="rounded-[17px] border border-line bg-white">
         <div className="border-b border-[#efede6] px-5 py-4">
           <h2 className="text-lg font-extrabold tracking-tight">
-            Прогноз на {horizon} мес.
+            {t("Прогноз на {n} мес.", { n: horizon })}
           </h2>
           <p className="text-sm text-muted">
             {!ready
-              ? "Добавьте продукт с ценой и укажите продажи в месяц — здесь появится расчёт."
-              : "Операционная модель: подписки учитывают отток, CAC начисляется только на новых клиентов."}
+              ? t("Добавьте продукт с ценой и укажите продажи в месяц — здесь появится расчёт.")
+              : t("Операционная модель: подписки учитывают отток, CAC начисляется только на новых клиентов.")}
           </p>
         </div>
         {ready && (
           <div className="p-5">
             <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
               <Tile
-                label="Выручка"
+                label={t("Выручка")}
                 value={m(fc.revenue)}
-                hint="за весь период"
+                hint={t("за весь период")}
               />
               <Tile
-                label="Привлечение"
+                label={t("Привлечение")}
                 value={m(fc.acq)}
-                hint="CAC × новые продажи"
+                hint={t("CAC × новые продажи")}
               />
               <Tile
-                label="Себестоимость"
+                label={t("Себестоимость")}
                 value={m(fc.delivery)}
-                hint="часы + переменные"
+                hint={t("часы + переменные")}
               />
               <Tile
-                label="Постоянные"
+                label={t("Постоянные")}
                 value={m(fc.fixed)}
-                hint="с учётом роста"
+                hint={t("с учётом роста")}
               />
               <Tile
-                label="Операционная прибыль"
+                label={t("Операционная прибыль")}
                 value={m(fc.profit)}
-                hint={`маржа ${fc.margin.toFixed(1)}%`}
+                hint={t("маржа {n}%", { n: fc.margin.toFixed(1) })}
                 tone={fc.profit < 0 ? "bad" : fc.profit > 0 ? "ok" : undefined}
               />
             </div>
             <div className="mt-2.5 grid gap-2.5 md:grid-cols-3">
               <Insight
-                label="Выход в плюс"
+                label={t("Выход в плюс")}
                 value={
-                  fc.breakEven ? `месяц ${fc.breakEven}` : "не в этом горизонте"
+                  fc.breakEven
+                    ? t("месяц {n}", { n: fc.breakEven })
+                    : t("не в этом горизонте")
                 }
-                hint="первый месяц без убытка"
+                hint={t("первый месяц без убытка")}
               />
               <Insight
-                label="Нужно денег до окупаемости"
+                label={t("Нужно денег до окупаемости")}
                 value={fc.cashNeed > 0 ? m(fc.cashNeed) : "—"}
-                hint="самая глубокая точка накопленного минуса"
+                hint={t("самая глубокая точка накопленного минуса")}
               />
               <Insight
-                label="Вложения окупаются"
+                label={t("Вложения окупаются")}
                 value={
                   fc.cashNeed > 0
                     ? fc.payback
-                      ? `месяц ${fc.payback}`
-                      : "не в этом горизонте"
-                    : "сразу"
+                      ? t("месяц {n}", { n: fc.payback })
+                      : t("не в этом горизонте")
+                    : t("сразу")
                 }
-                hint="накопленный результат снова ≥ 0"
+                hint={t("накопленный результат снова ≥ 0")}
               />
             </div>
 
@@ -290,24 +295,24 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
               className="mt-4 text-sm font-bold text-muted hover:text-ink"
             >
               {showTable
-                ? "Скрыть таблицу по месяцам ↑"
-                : "Показать таблицу по месяцам ↓"}
+                ? t("Скрыть таблицу по месяцам ↑")
+                : t("Показать таблицу по месяцам ↓")}
             </button>
             {showTable && (
               <div className="mt-3 overflow-x-auto">
                 <table className="w-full min-w-[760px] text-right text-sm tabular-nums">
                   <thead>
                     <tr className="border-b border-line text-[11px] text-muted">
-                      <th className="py-2 pr-2 text-left font-bold">Месяц</th>
-                      <th className="px-2 font-bold">Новые продажи</th>
-                      <th className="px-2 font-bold">Выручка</th>
+                      <th className="py-2 pr-2 text-left font-bold">{t("Месяц")}</th>
+                      <th className="px-2 font-bold">{t("Новые продажи")}</th>
+                      <th className="px-2 font-bold">{t("Выручка")}</th>
                       <th className="px-2 font-bold">CAC</th>
-                      <th className="px-2 font-bold">Себестоимость</th>
-                      <th className="px-2 font-bold">Постоянные</th>
-                      <th className="px-2 font-bold">Расходы всего</th>
-                      <th className="px-2 font-bold">Прибыль</th>
-                      <th className="px-2 font-bold">Маржа</th>
-                      <th className="pl-2 font-bold">Накоплено</th>
+                      <th className="px-2 font-bold">{t("Себестоимость")}</th>
+                      <th className="px-2 font-bold">{t("Постоянные")}</th>
+                      <th className="px-2 font-bold">{t("Расходы всего")}</th>
+                      <th className="px-2 font-bold">{t("Прибыль")}</th>
+                      <th className="px-2 font-bold">{t("Маржа")}</th>
+                      <th className="pl-2 font-bold">{t("Накоплено")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -362,6 +367,7 @@ function ProductCard({
   sym: string;
   mixTotal: number;
 }) {
+  const t = useT();
   const d = p.data as ProductData;
   const u = unitEconomics(d);
   const set = (data: Partial<ProductData>) => ctx.updateItem(p.id, { data });
@@ -380,7 +386,7 @@ function ProductCard({
           <AutoText
             value={p.title}
             onSave={(v) => ctx.updateItem(p.id, { title: v })}
-            placeholder="Название продукта или тарифа"
+            placeholder={t("Название продукта или тарифа")}
             className="font-bold"
             single
           />
@@ -389,8 +395,8 @@ function ProductCard({
           value={d.model ?? "subscription"}
           onChange={(v) => set({ model: v })}
           options={[
-            { value: "subscription", label: "Подписка / мес." },
-            { value: "one_time", label: "Разовая продажа" },
+            { value: "subscription", label: t("Подписка / мес.") },
+            { value: "one_time", label: t("Разовая продажа") },
           ]}
         />
         <StatusPick
@@ -403,7 +409,7 @@ function ProductCard({
 
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         <div>
-          <Label>{u.subscription ? "Цена в месяц" : "Цена"}</Label>
+          <Label>{u.subscription ? t("Цена в месяц") : t("Цена")}</Label>
           <NumField
             value={d.price}
             onSave={(v) => set({ price: v })}
@@ -412,24 +418,24 @@ function ProductCard({
         </div>
         <div>
           <Label>
-            {u.subscription ? "Часов на клиента / мес." : "Часов на клиента"}
+            {u.subscription ? t("Часов на клиента / мес.") : t("Часов на клиента")}
           </Label>
           <NumField
             value={d.hours}
             onSave={(v) => set({ hours: v })}
-            suffix="ч"
+            suffix={t("ч")}
           />
         </div>
         <div>
-          <Label>Стоимость часа команды</Label>
+          <Label>{t("Стоимость часа команды")}</Label>
           <NumField
             value={d.hour_cost}
             onSave={(v) => set({ hour_cost: v })}
-            suffix={`${sym}/ч`}
+            suffix={`${sym}/${t("ч")}`}
           />
         </div>
         <div>
-          <Label>Прочие затраты на продажу</Label>
+          <Label>{t("Прочие затраты на продажу")}</Label>
           <NumField
             value={d.variable}
             onSave={(v) => set({ variable: v })}
@@ -437,7 +443,7 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>CAC (привлечение)</Label>
+          <Label>{t("CAC (привлечение)")}</Label>
           <NumField
             value={d.cac}
             onSave={(v) => set({ cac: v })}
@@ -445,7 +451,7 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>Отток в месяц</Label>
+          <Label>{t("Отток в месяц")}</Label>
           <NumField
             value={d.churn}
             onSave={(v) => set({ churn: v })}
@@ -454,47 +460,47 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>Активных клиентов на старте</Label>
+          <Label>{t("Активных клиентов на старте")}</Label>
           <NumField
             value={d.start_active}
             onSave={(v) => set({ start_active: v })}
-            suffix="шт."
+            suffix={t("шт.")}
             disabled={!u.subscription}
           />
         </div>
         <div>
           <Label hint={mixTotal > 0 && !dropped ? `≈ ${share}%` : undefined}>
-            Доля продаж
+            {t("Доля продаж")}
           </Label>
           <NumField value={d.mix} onSave={(v) => set({ mix: v })} suffix="%" />
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 rounded-[11px] bg-[#faf9f6] p-3 md:grid-cols-5">
-        <Derived label="Себестоимость продажи" value={m(u.delivery)} />
+        <Derived label={t("Себестоимость продажи")} value={m(u.delivery)} />
         <Derived
-          label="Вклад до CAC"
+          label={t("Вклад до CAC")}
           value={m(u.contribution)}
           bad={u.contribution < 0}
         />
         <Derived
-          label="Маржа до CAC"
+          label={t("Маржа до CAC")}
           value={`${u.margin.toFixed(0)}%`}
           bad={u.margin < 0}
         />
         {u.subscription ? (
           <>
             <Derived
-              label="CAC окупается за"
+              label={t("CAC окупается за")}
               value={
                 u.paybackMonths !== null
-                  ? `${u.paybackMonths.toFixed(1)} мес.`
+                  ? `${u.paybackMonths.toFixed(1)} ${t("мес.")}`
                   : "—"
               }
               bad={u.paybackMonths !== null && u.paybackMonths > 12}
             />
             <Derived
-              label="LTV (вклад за жизнь)"
+              label={t("LTV (вклад за жизнь)")}
               value={u.ltv !== null ? m(u.ltv) : "—"}
               sub={
                 u.ltvCac !== null
@@ -506,7 +512,7 @@ function ProductCard({
           </>
         ) : (
           <Derived
-            label="Прибыль с продажи после CAC"
+            label={t("Прибыль с продажи после CAC")}
             value={m(u.profitAfterCac ?? 0)}
             bad={(u.profitAfterCac ?? 0) < 0}
           />
@@ -514,7 +520,7 @@ function ProductCard({
       </div>
       {dropped && (
         <p className="mt-2 text-xs text-muted">
-          Статус «Отказались» — продукт не учитывается в прогнозе.
+          {t("Статус «Отказались» — продукт не учитывается в прогнозе.")}
         </p>
       )}
     </div>

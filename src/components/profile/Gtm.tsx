@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
 import { useState } from "react";
 import { STATUS, freshness, type Gtm, type ProfileItem } from "@/lib/profile";
 import { CURRENCIES, n } from "@/lib/economics";
@@ -31,12 +32,13 @@ const LAUNCH_TYPES = [
 ];
 
 export default function GtmTab({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   if (!ctx.canCycle) {
     return (
       <Empty>
-        Вкладка заработает после запуска{" "}
-        <b>supabase/migrations/0007_product_cycle.sql</b> в Supabase → SQL
-        Editor.
+        {t("Вкладка заработает после запуска {file} в Supabase → SQL Editor.", {
+          file: "supabase/migrations/0007_product_cycle.sql",
+        })}
       </Empty>
     );
   }
@@ -51,12 +53,13 @@ export default function GtmTab({ ctx }: { ctx: ProfileCtx }) {
 /* ---------------- путь клиента ---------------- */
 
 export function Journey({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const stages = ctx.byKind("journey");
   const [adding, setAdding] = useState(false);
   const metricOptions = ctx
     .byKind("metric")
-    .map((m) => ({ value: m.id, label: m.title || "Метрика без названия" }));
+    .map((m) => ({ value: m.id, label: m.title || t("Метрика без названия") }));
 
   async function addTypical() {
     setAdding(true);
@@ -81,21 +84,20 @@ export function Journey({ ctx }: { ctx: ProfileCtx }) {
   return (
     <Section
       id="journey"
-      title="Путь клиента"
-      desc="Этапы, которые проходит клиент: от первого касания до повторной покупки. На каждом — что он делает, где мы с ним встречаемся и что мешает."
+      title={t("Путь клиента")}
+      desc={t("Этапы, которые проходит клиент: от первого касания до повторной покупки. На каждом — что он делает, где мы с ним встречаемся и что мешает.")}
       fresh={freshness("journey", profile, items)}
       onReviewed={() => ctx.markReviewed("journey")}
     >
       {stages.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-[12px] bg-[#faf9f6] px-4 py-6 text-center text-sm text-muted">
-          Этапов пока нет. Добавьте свои или начните с типовых — их можно
-          переименовать и удалить.
+          {t("Этапов пока нет. Добавьте свои или начните с типовых — их можно переименовать и удалить.")}
           <button
             onClick={addTypical}
             disabled={adding}
             className="rounded-[10px] border border-line bg-white px-3 py-1.5 text-sm font-bold text-ink hover:bg-[#f5f4ef] disabled:opacity-50"
           >
-            {adding ? "Добавляю…" : "Добавить 5 типовых этапов"}
+            {adding ? t("Добавляю…") : t("Добавить 5 типовых этапов")}
           </button>
         </div>
       ) : (
@@ -115,7 +117,7 @@ export function Journey({ ctx }: { ctx: ProfileCtx }) {
           </div>
         </div>
       )}
-      <AddBtn onClick={() => ctx.addItem("journey")}>+ Добавить этап</AddBtn>
+      <AddBtn onClick={() => ctx.addItem("journey")}>{t("+ Добавить этап")}</AddBtn>
     </Section>
   );
 }
@@ -135,6 +137,7 @@ function StageCard({
   onLeft?: () => void;
   onRight?: () => void;
 }) {
+  const t = useT();
   const set = (data: Record<string, unknown>) => ctx.updateItem(s.id, { data });
   const arrow =
     "grid h-7 w-7 place-items-center rounded-lg text-muted hover:bg-[#f5f4ef] hover:text-ink disabled:opacity-30";
@@ -146,14 +149,14 @@ function StageCard({
     >
       <div className="flex items-center gap-1">
         <span className="text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-          Этап {n}
+          {t("Этап {n}", { n })}
         </span>
         <div className="flex-1" />
         <button
           className={arrow}
           onClick={onLeft}
           disabled={!onLeft}
-          title="Левее"
+          title={t("Левее")}
         >
           ←
         </button>
@@ -161,7 +164,7 @@ function StageCard({
           className={arrow}
           onClick={onRight}
           disabled={!onRight}
-          title="Правее"
+          title={t("Правее")}
         >
           →
         </button>
@@ -171,45 +174,45 @@ function StageCard({
         <AutoText
           value={s.title}
           onSave={(v) => ctx.updateItem(s.id, { title: v })}
-          placeholder="Название этапа"
+          placeholder={t("Название этапа")}
           className="font-bold"
           single
         />
       </div>
       <div className="mt-2.5">
-        <Label>Что делает клиент</Label>
+        <Label>{t("Что делает клиент")}</Label>
         <AutoText
           value={s.data.action ?? ""}
           onSave={(v) => set({ action: v })}
-          placeholder="Гуглит, спрашивает коллег…"
+          placeholder={t("Гуглит, спрашивает коллег…")}
           rows={2}
         />
       </div>
       <div className="mt-2.5">
-        <Label>Где встречаемся</Label>
+        <Label>{t("Где встречаемся")}</Label>
         <AutoText
           value={s.data.touchpoint ?? ""}
           onSave={(v) => set({ touchpoint: v })}
-          placeholder="Сайт, реклама, звонок, письмо…"
+          placeholder={t("Сайт, реклама, звонок, письмо…")}
           rows={2}
         />
       </div>
       <div className="mt-2.5">
-        <Label>Боль / барьер</Label>
+        <Label>{t("Боль / барьер")}</Label>
         <AutoText
           value={s.data.pain ?? ""}
           onSave={(v) => set({ pain: v })}
-          placeholder="Что мешает перейти на следующий этап"
+          placeholder={t("Что мешает перейти на следующий этап")}
           rows={2}
         />
       </div>
       <div className="mt-2.5">
-        <Label>Метрика этапа</Label>
+        <Label>{t("Метрика этапа")}</Label>
         <Pick
           value={s.data.metric_id ?? ""}
           options={metricOptions}
           onChange={(v) => set({ metric_id: v || null })}
-          placeholder={metricOptions.length ? "—" : "Сначала добавьте метрики"}
+          placeholder={metricOptions.length ? "—" : t("Сначала добавьте метрики")}
         />
       </div>
     </div>
@@ -219,6 +222,7 @@ function StageCard({
 /* ---------------- каналы ---------------- */
 
 function Channels({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const channels = ctx.byKind("channel");
   const sym = CURRENCIES.find(
@@ -226,7 +230,7 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
   )!.label.split(" ")[0];
   const icpOptions = ctx
     .byKind("icp")
-    .map((i) => ({ value: i.id, label: i.title || "ICP без названия" }));
+    .map((i) => ({ value: i.id, label: i.title || t("ICP без названия") }));
   const hyps = ctx.byKind("hypothesis");
   // сначала гипотезы типа «Канал»
   const hypOptions = [
@@ -236,21 +240,20 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
     value: h.id,
     label:
       (h.data.type === "channel" ? "📣 " : "") +
-      (h.title || "Гипотеза без формулировки"),
+      (h.title || t("Гипотеза без формулировки")),
   }));
 
   return (
     <Section
       id="channel"
-      title="Каналы привлечения"
-      desc="Где и как клиенты будут узнавать о продукте. Каждый канал — гипотеза, пока не доказано, что он приводит клиентов по нормальной цене."
+      title={t("Каналы привлечения")}
+      desc={t("Где и как клиенты будут узнавать о продукте. Каждый канал — гипотеза, пока не доказано, что он приводит клиентов по нормальной цене.")}
       fresh={freshness("channel", profile, items)}
       onReviewed={() => ctx.markReviewed("channel")}
     >
       {channels.length === 0 ? (
         <Empty>
-          Каналов пока нет. Например: холодные письма, партнёры-агентства, SEO,
-          реклама в картах.
+          {t("Каналов пока нет. Например: холодные письма, партнёры-агентства, SEO, реклама в картах.")}
         </Empty>
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -269,7 +272,7 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
                     <AutoText
                       value={c.title}
                       onSave={(v) => ctx.updateItem(c.id, { title: v })}
-                      placeholder="Название канала"
+                      placeholder={t("Название канала")}
                       className="font-bold"
                       single
                     />
@@ -284,16 +287,16 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
                 </div>
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <div>
-                    <Label>Для кого (ICP)</Label>
+                    <Label>{t("Для кого (ICP)")}</Label>
                     <Pick
                       value={c.data.icp_id ?? ""}
                       options={icpOptions}
                       onChange={(v) => set({ icp_id: v || null })}
-                      placeholder="Все ICP"
+                      placeholder={t("Все ICP")}
                     />
                   </div>
                   <div>
-                    <Label hint="оценка">Цена клиента (CAC)</Label>
+                    <Label hint={t("оценка")}>{t("Цена клиента (CAC)")}</Label>
                     <NumField
                       value={c.data.cac}
                       onSave={(v) => set({ cac: v })}
@@ -302,28 +305,28 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
                   </div>
                 </div>
                 <div className="mt-3">
-                  <Label>Как используем</Label>
+                  <Label>{t("Как используем")}</Label>
                   <AutoText
                     value={c.data.how ?? ""}
                     onSave={(v) => set({ how: v })}
-                    placeholder="Что делаем, сколько тратим, какой бюджет на тест"
+                    placeholder={t("Что делаем, сколько тратим, какой бюджет на тест")}
                   />
                 </div>
                 <div className="mt-3">
-                  <Label>Проверяем гипотезой</Label>
+                  <Label>{t("Проверяем гипотезой")}</Label>
                   <Pick
                     value={c.data.hypothesis_id ?? ""}
                     options={hypOptions}
                     onChange={(v) => set({ hypothesis_id: v || null })}
-                    placeholder={hypOptions.length ? "—" : "Гипотез пока нет"}
+                    placeholder={hypOptions.length ? "—" : t("Гипотез пока нет")}
                   />
                 </div>
                 <div className="mt-3">
-                  <Label>Результат</Label>
+                  <Label>{t("Результат")}</Label>
                   <AutoText
                     value={c.data.result ?? ""}
                     onSave={(v) => set({ result: v })}
-                    placeholder="Сколько лидов / клиентов и по какой цене"
+                    placeholder={t("Сколько лидов / клиентов и по какой цене")}
                   />
                 </div>
               </div>
@@ -331,7 +334,7 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
           })}
         </div>
       )}
-      <AddBtn onClick={() => ctx.addItem("channel")}>+ Добавить канал</AddBtn>
+      <AddBtn onClick={() => ctx.addItem("channel")}>{t("+ Добавить канал")}</AddBtn>
     </Section>
   );
 }
@@ -339,6 +342,7 @@ function Channels({ ctx }: { ctx: ProfileCtx }) {
 /* ---------------- первые 100 клиентов и запуск ---------------- */
 
 function First100({ ctx }: { ctx: ProfileCtx }) {
+  const { t, rich } = useI18n();
   const { profile, items } = ctx;
   const g: Gtm = profile.gtm ?? {};
   const set = (patch: Partial<Gtm>) =>
@@ -350,8 +354,8 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
   return (
     <Section
       id="gtm"
-      title="Первые 100 клиентов и запуск"
-      desc="Откуда конкретно возьмутся первые клиенты и как мы выходим на рынок."
+      title={t("Первые 100 клиентов и запуск")}
+      desc={t("Откуда конкретно возьмутся первые клиенты и как мы выходим на рынок.")}
       fresh={freshness("gtm", profile, items)}
       onReviewed={() => ctx.markReviewed("gtm")}
     >
@@ -359,11 +363,11 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
         <div>
           <div className="flex items-end gap-3">
             <div className="w-[140px]">
-              <Label>Клиентов сейчас</Label>
+              <Label>{t("Клиентов сейчас")}</Label>
               <NumField
                 value={g.clients_now}
                 onSave={(v) => set({ clients_now: v })}
-                suffix="из 100"
+                suffix={t("из 100")}
               />
             </div>
             <div className="mb-2.5 flex-1">
@@ -376,21 +380,25 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
             </div>
           </div>
           <p className="mt-1.5 text-xs text-muted">
-            На вкладке{" "}
-            <button
-              onClick={() => ctx.goTo("market", "prospect")}
-              className="font-bold underline decoration-dotted underline-offset-2 hover:text-ink"
-            >
-              «Рынок»
-            </button>
-            : {prospects.length} потенциальных клиентов, {pilots} на пилоте.
+            {rich("На вкладке {tab}: {n} потенциальных клиентов, {pilots} на пилоте.", {
+              tab: (
+                <button
+                  onClick={() => ctx.goTo("market", "prospect")}
+                  className="font-bold underline decoration-dotted underline-offset-2 hover:text-ink"
+                >
+                  {t("«Рынок»")}
+                </button>
+              ),
+              n: prospects.length,
+              pilots,
+            })}
           </p>
           <div className="mt-4">
-            <Label>Откуда возьмём первых 100</Label>
+            <Label>{t("Откуда возьмём первых 100")}</Label>
             <AutoText
               value={g.first100 ?? ""}
               onSave={(v) => set({ first100: v })}
-              placeholder="Например: 10 — личные связи, 30 — холодные письма по списку из карт, 60 — через 3 агентства-партнёра"
+              placeholder={t("Например: 10 — личные связи, 30 — холодные письма по списку из карт, 60 — через 3 агентства-партнёра")}
               rows={4}
             />
           </div>
@@ -398,7 +406,7 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
         <div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Дата запуска</Label>
+              <Label>{t("Дата запуска")}</Label>
               <input
                 type="date"
                 value={g.launch_date ?? ""}
@@ -409,7 +417,7 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
               />
             </div>
             <div>
-              <Label>Тип запуска</Label>
+              <Label>{t("Тип запуска")}</Label>
               <Pick
                 value={g.launch_type ?? ""}
                 options={LAUNCH_TYPES}
@@ -418,11 +426,11 @@ function First100({ ctx }: { ctx: ProfileCtx }) {
             </div>
           </div>
           <div className="mt-4">
-            <Label>План запуска</Label>
+            <Label>{t("План запуска")}</Label>
             <AutoText
               value={g.launch_plan ?? ""}
               onSave={(v) => set({ launch_plan: v })}
-              placeholder="Что должно быть готово, кому и как сообщаем, какую цену ставим на старте, что считаем успешным запуском"
+              placeholder={t("Что должно быть готово, кому и как сообщаем, какую цену ставим на старте, что считаем успешным запуском")}
               rows={4}
             />
           </div>

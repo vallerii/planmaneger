@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
 import { useState } from "react";
 import {
   KIND_LABEL,
@@ -9,7 +10,7 @@ import {
   type ProfileItem,
   type Tab,
 } from "@/lib/profile";
-import { dateRu, parseDate, todayISO } from "@/lib/schedule";
+import { parseDate, todayISO } from "@/lib/schedule";
 import { n } from "@/lib/economics";
 import type { ProfileCtx } from "./ProfileApp";
 import {
@@ -26,13 +27,14 @@ import {
 const STALE_MEASURE_DAYS = 14;
 
 export default function MetricsTab({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   if (!ctx.canCycle) {
     return (
       <Empty>
-        Вкладка заработает после запуска{" "}
-        <b>supabase/migrations/0007_product_cycle.sql</b> в Supabase → SQL
-        Editor.
+        {t("Вкладка заработает после запуска {file} в Supabase → SQL Editor.", {
+          file: "supabase/migrations/0007_product_cycle.sql",
+        })}
       </Empty>
     );
   }
@@ -53,23 +55,22 @@ export default function MetricsTab({ ctx }: { ctx: ProfileCtx }) {
     <div className="flex flex-col gap-5">
       <Section
         id="metric"
-        title="Метрики успеха"
-        desc="По ним видно, работает ли продукт. Одна главная метрика (North Star) — ценность, которую клиент получает, и 3–5 метрик под ней, которые на неё влияют. Гипотезы и решения ссылаются на метрику, которую должны сдвинуть."
+        title={t("Метрики успеха")}
+        desc={t("По ним видно, работает ли продукт. Одна главная метрика (North Star) — ценность, которую клиент получает, и 3–5 метрик под ней, которые на неё влияют. Гипотезы и решения ссылаются на метрику, которую должны сдвинуть.")}
         fresh={freshness("metric", profile, items)}
         onReviewed={() => ctx.markReviewed("metric")}
       >
         <div className="mb-2 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-          ★ Главная метрика
+          {t("★ Главная метрика")}
         </div>
         {north.length === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-[12px] border border-dashed border-[#bdbbb2] px-4 py-5 text-center text-sm text-muted">
-            Какое одно число лучше всего показывает, что клиенты получают
-            ценность? Например: «салоны, ответившие на 80% отзывов за неделю».
+            {t("Какое одно число лучше всего показывает, что клиенты получают ценность? Например: «салоны, ответившие на 80% отзывов за неделю».")}
             <button
               onClick={() => ctx.addItem("metric", { level: "north" })}
               className="rounded-[10px] bg-ink px-3 py-1.5 text-sm font-bold text-white"
             >
-              + Задать главную метрику
+              {t("+ Задать главную метрику")}
             </button>
           </div>
         ) : (
@@ -85,12 +86,11 @@ export default function MetricsTab({ ctx }: { ctx: ProfileCtx }) {
         )}
 
         <div className="mt-6 mb-2 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-          Метрики под главной
+          {t("Метрики под главной")}
         </div>
         {inputs.length === 0 ? (
           <Empty>
-            Что влияет на главную метрику? Например: активация, удержание через
-            30 дней, конверсия из пробного периода.
+            {t("Что влияет на главную метрику? Например: активация, удержание через 30 дней, конверсия из пробного периода.")}
           </Empty>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -105,7 +105,7 @@ export default function MetricsTab({ ctx }: { ctx: ProfileCtx }) {
           </div>
         )}
         <AddBtn onClick={() => ctx.addItem("metric", { level: "input" })}>
-          + Добавить метрику
+          {t("+ Добавить метрику")}
         </AddBtn>
       </Section>
     </div>
@@ -123,6 +123,7 @@ function MetricCard({
   onNorth: () => void;
   big?: boolean;
 }) {
+  const { t, date: fmtDate } = useI18n();
   const d = m.data;
   const set = (data: Record<string, unknown>) => ctx.updateItem(m.id, { data });
   const [val, setVal] = useState<number | undefined>(undefined);
@@ -182,7 +183,7 @@ function MetricCard({
           <AutoText
             value={m.title}
             onSave={(v) => ctx.updateItem(m.id, { title: v })}
-            placeholder={big ? "Главная метрика" : "Название метрики"}
+            placeholder={big ? t("Главная метрика") : t("Название метрики")}
             className={big ? "text-lg font-extrabold" : "font-bold"}
             single
           />
@@ -190,7 +191,7 @@ function MetricCard({
         {!big && (
           <button
             onClick={onNorth}
-            title="Сделать главной (North Star)"
+            title={t("Сделать главной (North Star)")}
             className="h-[30px] shrink-0 rounded-lg px-2 text-sm font-bold text-muted hover:bg-[#f5f4ef] hover:text-[#b58800]"
           >
             ☆
@@ -209,25 +210,25 @@ function MetricCard({
         className={`mt-3 grid gap-3 ${big ? "grid-cols-2 md:grid-cols-4" : "grid-cols-3"}`}
       >
         <div>
-          <Label>Единица</Label>
+          <Label>{t("Единица")}</Label>
           <AutoText
             value={d.unit ?? ""}
             onSave={(v) => set({ unit: v })}
-            placeholder="%, ₽, шт."
+            placeholder={t("%, ₽, шт.")}
             single
           />
         </div>
         <div>
-          <Label>Старт</Label>
+          <Label>{t("Старт")}</Label>
           <NumField value={d.baseline} onSave={(v) => set({ baseline: v })} />
         </div>
         <div>
-          <Label>Цель</Label>
+          <Label>{t("Цель")}</Label>
           <NumField value={d.target} onSave={(v) => set({ target: v })} />
         </div>
         {big && (
           <div>
-            <Label>Цель к дате</Label>
+            <Label>{t("Цель к дате")}</Label>
             <input
               type="date"
               value={d.target_date ?? ""}
@@ -241,21 +242,21 @@ function MetricCard({
       {/* текущее значение */}
       <div className="mt-3 rounded-[11px] bg-white/70 p-3 ring-1 ring-[#efede6]">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span className="text-[11px] font-bold text-muted">Сейчас</span>
+          <span className="text-[11px] font-bold text-muted">{t("Сейчас")}</span>
           <span
             className={`font-extrabold tabular-nums ${big ? "text-2xl" : "text-lg"}`}
           >
             {fmt(d.current)}
           </span>
           {d.target !== undefined && d.target !== null && d.target !== "" && (
-            <span className="text-sm text-muted">цель {fmt(d.target)}</span>
+            <span className="text-sm text-muted">{t("цель")} {fmt(d.target)}</span>
           )}
           <span
             className={`ml-auto text-xs ${stale ? "font-bold text-bad" : "text-muted"}`}
           >
             {d.measured_at
-              ? `замер ${dateRu(parseDate(d.measured_at))}${stale ? " — давно" : ""}`
-              : "замеров нет"}
+              ? `${t("замер")} ${fmtDate(parseDate(d.measured_at))}${stale ? ` — ${t("давно")}` : ""}`
+              : t("замеров нет")}
           </span>
         </div>
         {pct !== null && (
@@ -273,7 +274,7 @@ function MetricCard({
                 key={h.date}
                 className="rounded bg-[#f3f2ed] px-1.5 py-0.5 tabular-nums"
               >
-                {dateRu(parseDate(h.date)).replace(/ \d{4}$/, "")}:{" "}
+                {fmtDate(parseDate(h.date)).replace(/ \d{4}$/, "")}:{" "}
                 <b className="text-ink">{+n(h.value).toFixed(2)}</b>
               </span>
             ))}
@@ -286,7 +287,7 @@ function MetricCard({
                 value={val}
                 onSave={(v) => setVal(v)}
                 suffix={unit || undefined}
-                placeholder="значение"
+                placeholder={t("значение")}
               />
             </div>
             <input
@@ -300,13 +301,13 @@ function MetricCard({
               disabled={val === undefined}
               className="h-[36px] rounded-lg bg-ink px-3 text-sm font-bold text-white disabled:opacity-40"
             >
-              Записать
+              {t("Записать")}
             </button>
             <button
               onClick={() => setOpen(false)}
               className="h-[36px] px-2 text-sm font-bold text-muted hover:text-ink"
             >
-              Отмена
+              {t("Отмена")}
             </button>
           </div>
         ) : (
@@ -314,17 +315,17 @@ function MetricCard({
             onClick={() => setOpen(true)}
             className="mt-2 text-xs font-bold text-muted hover:text-ink"
           >
-            + Записать замер
+            {t("+ Записать замер")}
           </button>
         )}
       </div>
 
       <div className="mt-3">
-        <Label>Как считаем</Label>
+        <Label>{t("Как считаем")}</Label>
         <AutoText
           value={d.formula ?? ""}
           onSave={(v) => set({ formula: v })}
-          placeholder="Откуда берём данные и по какой формуле"
+          placeholder={t("Откуда берём данные и по какой формуле")}
           rows={1}
         />
       </div>
@@ -332,16 +333,16 @@ function MetricCard({
       {linked.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] font-bold text-muted">
-            Двигают метрику:
+            {t("Двигают метрику:")}
           </span>
           {linked.map((i) => (
             <button
               key={i.id}
               onClick={() => ctx.goTo(tabOf[i.kind], `item-${i.id}`)}
               className="max-w-[260px] truncate rounded-full bg-[#f3f2ed] px-2.5 py-0.5 text-xs font-bold hover:bg-[#e7e5dd]"
-              title={KIND_LABEL[i.kind]}
+              title={t(KIND_LABEL[i.kind])}
             >
-              {KIND_LABEL[i.kind]}: {i.title || "без названия"}
+              {t(KIND_LABEL[i.kind])}: {i.title || t("без названия")}
             </button>
           ))}
         </div>

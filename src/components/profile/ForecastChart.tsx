@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useEffect, useRef, useState } from "react";
 import { money, type Currency, type ForecastRow } from "@/lib/economics";
 
@@ -20,6 +21,7 @@ export default function ForecastChart({
   rows: ForecastRow[];
   currency: Currency;
 }) {
+  const t = useT();
   const wrap = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(800);
   const [hover, setHover] = useState<number | null>(null);
@@ -50,7 +52,7 @@ export default function ForecastChart({
     PAD.left + (rows.length === 1 ? iw / 2 : (i / (rows.length - 1)) * iw);
   const y = (v: number) => PAD.top + ((max - v) / (max - min)) * ih;
   const ticks = niceTicks(min, max, 4);
-  const short = (v: number) => compact(v, currency);
+  const short = (v: number) => compact(v, currency, t);
   const labelEvery = rows.length > 24 ? 6 : 3;
 
   const path = (k: (typeof SERIES)[number]["key"]) =>
@@ -84,7 +86,7 @@ export default function ForecastChart({
                 strokeDasharray={s.dash}
               />
             </svg>
-            {s.label}
+            {t(s.label)}
           </span>
         ))}
       </div>
@@ -93,7 +95,7 @@ export default function ForecastChart({
           width={w}
           height={H}
           role="img"
-          aria-label="Прогноз: выручка, расходы и прибыль по месяцам"
+          aria-label={t("Прогноз: выручка, расходы и прибыль по месяцам")}
           className="block"
         >
           {ticks.map((t) => (
@@ -191,7 +193,7 @@ export default function ForecastChart({
         </svg>
         {!hasData && (
           <div className="absolute inset-0 grid place-items-center text-sm text-muted">
-            Нет данных для графика
+            {t("Нет данных для графика")}
           </div>
         )}
         {hr && hover !== null && (
@@ -199,21 +201,21 @@ export default function ForecastChart({
             className="pointer-events-none absolute top-2 z-10 w-[190px] rounded-[10px] border border-line bg-white px-3 py-2 text-xs shadow-[0_6px_20px_rgba(20,20,10,.12)]"
             style={{ left: Math.min(Math.max(x(hover) + 12, 0), w - 200) }}
           >
-            <div className="mb-1 font-extrabold">Месяц {hr.m}</div>
+            <div className="mb-1 font-extrabold">{t("Месяц {m}", { m: hr.m })}</div>
             {SERIES.map((s) => (
               <div key={s.key} className="flex items-center gap-1.5">
                 <span
                   className="h-2 w-2 rounded-full"
                   style={{ background: s.color }}
                 />
-                <span className="text-muted">{s.label}</span>
+                <span className="text-muted">{t(s.label)}</span>
                 <span className="ml-auto font-bold tabular-nums">
                   {money(hr[s.key], currency)}
                 </span>
               </div>
             ))}
             <div className="mt-1 flex border-t border-[#efede6] pt-1">
-              <span className="text-muted">Накоплено</span>
+              <span className="text-muted">{t("Накоплено")}</span>
               <span
                 className={`ml-auto font-bold tabular-nums ${hr.cumulative < 0 ? "text-bad" : ""}`}
               >
@@ -240,14 +242,18 @@ function niceTicks(min: number, max: number, count: number) {
   return out;
 }
 
-function compact(v: number, currency: Currency) {
+function compact(
+  v: number,
+  currency: Currency,
+  t: (k: string) => string,
+) {
   const sym = currency === "EUR" ? "€" : currency === "USD" ? "$" : "₽";
   const a = Math.abs(v);
   const s =
     a >= 1e6
-      ? `${+(v / 1e6).toFixed(1)} млн`
+      ? `${+(v / 1e6).toFixed(1)} ${t("млн")}`
       : a >= 1e3
-        ? `${+(v / 1e3).toFixed(a >= 1e4 ? 0 : 1)} тыс`
+        ? `${+(v / 1e3).toFixed(a >= 1e4 ? 0 : 1)} ${t("тыс")}`
         : `${Math.round(v)}`;
   return `${s} ${sym}`;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
@@ -34,12 +35,13 @@ export function TaskCardView({
   onUpdate,
   onDelete,
 }: ViewProps) {
+  const { t: tr, tp, html } = useI18n();
   const overdue =
     !!t.deadline &&
     t.deadline < todayISO() &&
     t.progress < 100 &&
     t.status !== "revisit";
-  const desc = plainFromHtml(t.description);
+  const desc = plainFromHtml(html(t.description));
   const dl = deadlineStatus(t, sizeDays);
   const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
@@ -57,7 +59,7 @@ export function TaskCardView({
         <div
           className={`min-h-9 flex-1 leading-tight font-bold break-words ${t.status === "cancelled" ? "text-muted line-through" : ""}`}
         >
-          {t.name}
+          {tr(t.name)}
         </div>
         {onDelete && (
           <button
@@ -66,8 +68,8 @@ export function TaskCardView({
               e.stopPropagation();
               onDelete();
             }}
-            title="Удалить задачу"
-            aria-label="Удалить задачу"
+            title={tr("Удалить задачу")}
+            aria-label={tr("Удалить задачу")}
             className={`${trashBtnCls} -mt-1 -mr-1.5`}
           >
             <TrashIcon />
@@ -78,7 +80,7 @@ export function TaskCardView({
       <div className="mt-[7px] flex flex-wrap items-center gap-1.5">
         {t.status !== "todo" && (
           <Badge className={STATUS_META[t.status].badge}>
-            {STATUS_META[t.status].label}
+            {tr(STATUS_META[t.status].label)}
           </Badge>
         )}
         {t.status !== "done" && t.status !== "cancelled" && (
@@ -86,20 +88,20 @@ export function TaskCardView({
         )}
         {!!t.unread && (
           <Badge className="bg-bad text-white">
-            {t.unread} {newWord(t.unread)}
+            {t.unread} {tp(t.unread, "новый", "новых", "новых")}
           </Badge>
         )}
         {!!t.comment_count && !t.unread && (
-          <Badge>{t.comment_count} комм.</Badge>
+          <Badge>{t.comment_count} {tr("комм.")}</Badge>
         )}
         {t.hypothesis_id && (
-          <Badge className="bg-[#f1ecfb] text-[#5b3fa0]">🧪 гипотеза</Badge>
+          <Badge className="bg-[#f1ecfb] text-[#5b3fa0]">{tr("🧪 гипотеза")}</Badge>
         )}
         {dl?.kind === "tight" && (
-          <Badge className="bg-[#fff5d8] text-[#6b4c00]">⚠ впритык</Badge>
+          <Badge className="bg-[#fff5d8] text-[#6b4c00]">{tr("⚠ впритык")}</Badge>
         )}
         {dl?.kind === "late" && (
-          <Badge className="bg-[#fff0ed] text-bad">⚠ не успеваем</Badge>
+          <Badge className="bg-[#fff0ed] text-bad">{tr("⚠ не успеваем")}</Badge>
         )}
       </div>
 
@@ -118,8 +120,10 @@ export function TaskCardView({
 
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[11px] text-muted">
-          осталось {fmtDays(remainingTaskDays(t, sizeDays))} из{" "}
-          {fmtDays(sizeOf(t, sizeDays))} дн.
+          {tr("осталось {left} из {total} дн.", {
+            left: fmtDays(remainingTaskDays(t, sizeDays)),
+            total: fmtDays(sizeOf(t, sizeDays)),
+          })}
         </span>
         {!onUpdate ? (
           <span className="rounded-[7px] bg-[#f0efe9] px-2 py-0.5 text-xs font-extrabold">
@@ -129,13 +133,13 @@ export function TaskCardView({
         <Select
           size="sm"
           value={t.size}
-          ariaLabel="Размер задачи"
+          ariaLabel={tr("Размер задачи")}
           menuWidth={150}
           onChange={(v) => onUpdate?.({ size: v })}
           options={SIZES.map((s) => ({
             value: s,
             label: s,
-            hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
+            hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? tr("день") : tr("дн.")}`,
           }))}
         />
         )}
@@ -146,14 +150,14 @@ export function TaskCardView({
         onClick={stop}
         className={`mt-2 flex items-center gap-1.5 border-t border-[#eeece6] pt-2 text-[11px] ${overdue ? "font-extrabold text-bad" : "text-muted"}`}
       >
-        <span>{overdue ? "Просрочено" : "Дедлайн"}</span>
+        <span>{overdue ? tr("Просрочено") : tr("Дедлайн")}</span>
         <input
           type="date"
           value={t.deadline ?? ""}
           readOnly={!onUpdate}
           disabled={!onUpdate && !t.deadline}
           onChange={(e) => onUpdate?.({ deadline: e.target.value || null })}
-          title="Дедлайн задачи — не влияет на планирование"
+          title={tr("Дедлайн задачи — не влияет на планирование")}
           className={`min-w-0 flex-1 rounded-[7px] border-0 px-1.5 py-1 text-[11px] outline-none focus:bg-white focus:outline focus:outline-line ${
             overdue ? "bg-[#fff0ed] text-bad" : "bg-[#f5f4ef] text-ink"
           }`}
@@ -162,13 +166,6 @@ export function TaskCardView({
     </div>
   );
 }
-
-const newWord = (n: number) => {
-  const a = n % 100,
-    b = n % 10;
-  if (b === 1 && a !== 11) return "новый";
-  return "новых";
-};
 
 function Badge({
   children,

@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useT } from "@/i18n/client";
 
 /** Переключатель «Доска | Профиль продукта» в шапке проекта. */
 export default function ProjectNav({
@@ -8,6 +11,7 @@ export default function ProjectNav({
   projectId: string;
   active: "board" | "profile";
 }) {
+  const t = useT();
   const tab = (on: boolean) =>
     `rounded-[9px] px-3 py-1.5 text-sm font-bold whitespace-nowrap transition ${
       on
@@ -17,13 +21,13 @@ export default function ProjectNav({
   return (
     <nav className="inline-flex shrink-0 rounded-[11px] bg-[#e7e5dd] p-1">
       <Link href={`/projects/${projectId}`} className={tab(active === "board")}>
-        Доска
+        {t("Доска")}
       </Link>
       <Link
         href={`/projects/${projectId}/profile`}
         className={tab(active === "profile")}
       >
-        Профиль продукта
+        {t("Профиль продукта")}
       </Link>
     </nav>
   );

@@ -1,5 +1,7 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
+import LangSwitcher from "../LangSwitcher";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,7 +38,7 @@ import type {
   Task,
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { buildSchedule, dateRu, parseDate } from "@/lib/schedule";
+import { buildSchedule, parseDate } from "@/lib/schedule";
 import {
   Brand,
   Btn,
@@ -83,6 +85,8 @@ export default function Board({
   hypotheses = null,
   initialTaskId = null,
 }: Props) {
+  const i18n = useI18n();
+  const { t } = i18n;
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [project, setProject] = useState(initialProject);
@@ -148,9 +152,9 @@ export default function Board({
 
   const fail = useCallback(
     (error: { message: string } | null) => {
-      if (error) toast("Ошибка: " + error.message);
+      if (error) toast(t("Ошибка:") + " " + error.message);
     },
-    [toast],
+    [toast, t],
   );
 
   // ---------- derived ----------
@@ -634,7 +638,7 @@ export default function Board({
     a.download = `${project.name.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase() || "roadmap"}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 500);
-    toast("Roadmap экспортирован");
+    toast(t("Roadmap экспортирован"));
   }
 
   return (
@@ -642,7 +646,7 @@ export default function Board({
       <header className="z-10 md:sticky md:top-0 border-b border-line bg-bg/90 px-3.5 py-4 backdrop-blur md:px-6">
         <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
           <div className="flex min-w-0 basis-full items-center gap-3 md:flex-1 md:basis-auto md:gap-4 2xl:basis-0">
-            <Link href="/" className="shrink-0" title="Все проекты">
+            <Link href="/" className="shrink-0" title={t("Все проекты")}>
               <Brand />
             </Link>
             <ProjectTitle
@@ -656,18 +660,19 @@ export default function Board({
             {readOnly ? (
               <span
                 className="inline-flex items-center rounded-[11px] bg-[#e6effc] px-3 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
-                title="Вы можете смотреть проект, но не менять его"
+                title={t("Вы можете смотреть проект, но не менять его")}
               >
-                👁 Только просмотр
+                {t("👁 Только просмотр")}
               </span>
             ) : (
               <>
                 <Btn onClick={() => setModal("date")}>
-                  Старт: {dateRu(parseDate(project.start_date))}
+                  {t("Старт:")} {i18n.date(parseDate(project.start_date))}
                 </Btn>
-                <Btn onClick={() => setModal("settings")}>⚙ Настройки</Btn>
+                <Btn onClick={() => setModal("settings")}>{t("⚙ Настройки")}</Btn>
               </>
             )}
+            <LangSwitcher />
             <Btn onClick={() => setModal("members")}>👥 {members.length}</Btn>
             {unread.enabled && (
               <CommentsBell
@@ -681,10 +686,10 @@ export default function Board({
                 }
               />
             )}
-            <Btn onClick={exportJson}>Экспорт JSON</Btn>
+            <Btn onClick={exportJson}>{t("Экспорт JSON")}</Btn>
             {!readOnly && (
               <Btn variant="primary" onClick={() => setModal("phase")}>
-                ＋ Фаза
+                {t("＋ Фаза")}
               </Btn>
             )}
           </div>
@@ -693,10 +698,10 @@ export default function Board({
         <Link
           href={`/projects/${project.id}/profile?tab=foundation`}
           className="group mt-3 flex items-center gap-2.5 rounded-[11px] border border-dashed border-line px-3 py-2 text-sm hover:border-[#c9c6bb] hover:bg-white"
-          title="Открыть профиль продукта"
+          title={t("Открыть профиль продукта")}
         >
           <span className="shrink-0 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-            Миссия
+            {t("Миссия")}
           </span>
           {mission?.trim() ? (
             <span className="min-w-0 flex-1 truncate font-semibold">
@@ -704,30 +709,28 @@ export default function Board({
             </span>
           ) : (
             <span className="min-w-0 flex-1 truncate text-muted">
-              Не заполнена — добавьте миссию и позиционирование, чтобы не терять
-              фокус
+              {t("Не заполнена — добавьте миссию и позиционирование, чтобы не терять фокус")}
             </span>
           )}
           <span className="shrink-0 text-xs font-bold text-muted group-hover:text-ink">
-            Профиль →
+            {t("Профиль →")}
           </span>
         </Link>
       </header>
 
       <main className="px-4 pt-5 pb-10 md:px-6">
           <div className="mb-4 flex flex-wrap items-center gap-3 text-muted">
-          <span>Размер задачи:</span>
+          <span>{t("Размер задачи:")}</span>
           {SIZES.map((k) => (
             <span
               key={k}
               className="rounded-full bg-[#e7e5dd] px-2 py-1 font-extrabold text-ink"
             >
-              {k} · {sd[k]} {sd[k] === 1 ? "день" : "дн."}
+              {k} · {sd[k]} {sd[k] === 1 ? t("день") : t("дн.")}
             </span>
           ))}
           <span>
-            <b>P1</b> — приоритет. Клик по карточке открывает детали. Отменённые
-            задачи не учитываются в сроках.
+            <b>P1</b>{" "}{t("— приоритет. Клик по карточке открывает детали. Отменённые задачи не учитываются в сроках.")}
           </span>
         </div>
 
@@ -789,7 +792,7 @@ export default function Board({
                   onClick={() => setModal("phase")}
                   className="min-h-[120px] rounded-[17px] border border-dashed border-[#bdbbb2] font-bold text-muted hover:bg-white"
                 >
-                  ＋ Добавить фазу
+                  {t("＋ Добавить фазу")}
                 </button>
               )}
             </section>
@@ -845,9 +848,9 @@ export default function Board({
 
       <NameModal
         open={modal === "phase"}
-        title="Новая фаза"
-        placeholder="Например: Partnerships"
-        cta="Добавить фазу"
+        title={t("Новая фаза")}
+        placeholder={t("Например: Partnerships")}
+        cta={t("Добавить фазу")}
         onClose={() => setModal(null)}
         onSubmit={(name) => addPhase(name)}
       />
@@ -891,7 +894,7 @@ export default function Board({
           onClose={() => setModal(null)}
           onSave={(v) => {
             updateProject({ size_days: v });
-            toast("Настройки сохранены");
+            toast(t("Настройки сохранены"));
           }}
           onDelete={() => {
             setModal(null);
@@ -912,24 +915,26 @@ export default function Board({
       />
       <ConfirmDialog
         open={confirmProject}
-        title="Удалить проект?"
-        confirmText="Удалить проект"
+        title={t("Удалить проект?")}
+        confirmText={t("Удалить проект")}
         onClose={() => setConfirmProject(false)}
         onConfirm={deleteProject}
       >
-        Проект «<b>{project.name}</b>» будет удалён вместе со всеми фазами (
-        {phases.length}), задачами ({tasks.length}) и комментариями. Участники
-        потеряют к нему доступ. Это действие нельзя отменить.
+        {i18n.rich(
+          "Проект «{name}» будет удалён вместе со всеми фазами ({phases}), задачами ({tasks}) и комментариями. Участники потеряют к нему доступ. Это действие нельзя отменить.",
+          { name: <b>{project.name}</b>, phases: phases.length, tasks: tasks.length },
+        )}
       </ConfirmDialog>
       <ConfirmDialog
         open={!!confirmTask}
-        title="Удалить задачу?"
+        title={t("Удалить задачу?")}
         onClose={() => setConfirmTask(null)}
         onConfirm={() => confirmTask && deleteTask(confirmTask)}
       >
-        Задача «<b>{tasks.find((t) => t.id === confirmTask)?.name}</b>» будет
-        удалена вместе с описанием и комментариями. Это действие нельзя
-        отменить.
+        {i18n.rich(
+          "Задача «{name}» будет удалена вместе с описанием и комментариями. Это действие нельзя отменить.",
+          { name: <b>{t(tasks.find((x) => x.id === confirmTask)?.name ?? "")}</b> },
+        )}
       </ConfirmDialog>
       {confirmPhase && (
         <DeletePhaseDialog
@@ -964,6 +969,7 @@ function NameModal({
   onClose: () => void;
   onSubmit: (name: string, size: Size) => void;
 }) {
+  const t = useT();
   const [name, setName] = useState("");
   const [size, setSize] = useState<Size>("M");
   const submit = () => {
@@ -975,7 +981,7 @@ function NameModal({
   };
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      <Field label="Название">
+      <Field label={t("Название")}>
         <input
           autoFocus
           className={inputCls}
@@ -986,7 +992,7 @@ function NameModal({
         />
       </Field>
       {withSize && (
-        <Field label="Размер">
+        <Field label={t("Размер")}>
           <Select
             value={size}
             onChange={setSize}
@@ -994,14 +1000,14 @@ function NameModal({
               value: s,
               label: s,
               hint: sizeDays
-                ? `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`
+                ? `${sizeDays[s]} ${sizeDays[s] === 1 ? t("день") : t("дн.")}`
                 : undefined,
             }))}
           />
         </Field>
       )}
       <div className="mt-5 flex justify-end gap-2">
-        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn onClick={onClose}>{t("Отмена")}</Btn>
         <Btn variant="primary" onClick={submit} disabled={!name.trim()}>
           {cta}
         </Btn>
@@ -1021,10 +1027,11 @@ function DateModal({
   onClose: () => void;
   onSave: (v: string) => void;
 }) {
+  const t = useT();
   const [v, setV] = useState(value);
   return (
-    <Modal open={open} onClose={onClose} title="Дата старта">
-      <Field label="Первый рабочий день">
+    <Modal open={open} onClose={onClose} title={t("Дата старта")}>
+      <Field label={t("Первый рабочий день")}>
         <input
           type="date"
           className={inputCls}
@@ -1033,7 +1040,7 @@ function DateModal({
         />
       </Field>
       <div className="mt-5 flex justify-end gap-2">
-        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn onClick={onClose}>{t("Отмена")}</Btn>
         <Btn
           variant="primary"
           onClick={() => {
@@ -1041,7 +1048,7 @@ function DateModal({
             onClose();
           }}
         >
-          Пересчитать
+          {t("Пересчитать")}
         </Btn>
       </div>
     </Modal>
@@ -1063,12 +1070,13 @@ function SettingsModal({
   onSave: (v: SizeDays) => void;
   onDelete: () => void;
 }) {
+  const t = useT();
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(SIZES.map((k) => [k, String(sizeDays[k])])),
   );
   return (
-    <Modal open={open} onClose={onClose} title="Настройки планировщика">
-      <Field label="Размер задачи → рабочих дней">
+    <Modal open={open} onClose={onClose} title={t("Настройки планировщика")}>
+      <Field label={t("Размер задачи → рабочих дней")}>
         <span className="grid grid-cols-[1fr_110px] items-center gap-2">
           {SIZES.map((k) => (
             <span key={k} className="contents">
@@ -1086,20 +1094,19 @@ function SettingsModal({
         </span>
       </Field>
       <p className="text-[11px] text-muted">
-        Изменение длительности сразу пересчитает оставшиеся дни, прогресс фаз и
-        дату запуска.
+        {t("Изменение длительности сразу пересчитает оставшиеся дни, прогресс фаз и дату запуска.")}
       </p>
       <div className="mt-5 flex flex-wrap justify-between gap-2">
         {isOwner ? (
           <Btn variant="danger" onClick={onDelete}>
             <TrashIcon size={14} />
-            Удалить проект
+            {t("Удалить проект")}
           </Btn>
         ) : (
           <span />
         )}
         <div className="flex gap-2">
-          <Btn onClick={onClose}>Отмена</Btn>
+          <Btn onClick={onClose}>{t("Отмена")}</Btn>
           <Btn
             variant="primary"
             onClick={() => {
@@ -1110,7 +1117,7 @@ function SettingsModal({
               onClose();
             }}
           >
-            Сохранить
+            {t("Сохранить")}
           </Btn>
         </div>
       </div>
@@ -1131,6 +1138,7 @@ function DeletePhaseDialog({
   onClose: () => void;
   onConfirm: (moveTo: string | null) => void;
 }) {
+  const { t, rich, tp } = useI18n();
   const canMove = taskCount > 0 && otherPhases.length > 0;
   const [mode, setMode] = useState<"move" | "delete">(
     canMove ? "move" : "delete",
@@ -1144,17 +1152,22 @@ function DeletePhaseDialog({
     `mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border-2 ${on ? "border-ink" : "border-[#c9c6bb]"}`;
 
   return (
-    <Modal open onClose={onClose} title="Удалить фазу?" width={480}>
+    <Modal open onClose={onClose} title={t("Удалить фазу?")} width={480}>
       {taskCount === 0 ? (
         <p className="text-[15px] leading-relaxed text-[#45443e]">
-          Фаза «<b>{phase.name}</b>» пустая и будет удалена.
+          {rich("Фаза «{name}» пустая и будет удалена.", {
+            name: <b>{phase.name}</b>,
+          })}
         </p>
       ) : (
         <>
           <p className="text-[15px] leading-relaxed text-[#45443e]">
-            В фазе «<b>{phase.name}</b>» {taskCount}{" "}
-            {taskCount === 1 ? "задача" : taskCount < 5 ? "задачи" : "задач"}.
-            Что с ними сделать?
+            {rich("В фазе «{name}» {count}. Что с ними сделать?", {
+              name: <b>{phase.name}</b>,
+              count: tp(taskCount, "{n} задача", "{n} задачи", "{n} задач", {
+                n: taskCount,
+              }),
+            })}
           </p>
           <div className="mt-4 flex flex-col gap-2">
             {canMove && (
@@ -1169,7 +1182,7 @@ function DeletePhaseDialog({
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-bold">
-                    Перенести задачи в другую фазу
+                    {t("Перенести задачи в другую фазу")}
                   </div>
                   <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                     <Select
@@ -1198,10 +1211,10 @@ function DeletePhaseDialog({
               </span>
               <div>
                 <div className="font-bold text-bad">
-                  Удалить вместе с задачами
+                  {t("Удалить вместе с задачами")}
                 </div>
                 <div className="text-sm text-muted">
-                  Задачи и их комментарии удалятся безвозвратно
+                  {t("Задачи и их комментарии удалятся безвозвратно")}
                 </div>
               </div>
             </div>
@@ -1209,7 +1222,7 @@ function DeletePhaseDialog({
         </>
       )}
       <div className="mt-6 flex justify-end gap-2">
-        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn onClick={onClose}>{t("Отмена")}</Btn>
         <Btn
           variant="destructive"
           onClick={() => {
@@ -1219,8 +1232,8 @@ function DeletePhaseDialog({
         >
           <TrashIcon size={14} />
           {mode === "move" && canMove
-            ? "Перенести и удалить фазу"
-            : "Удалить фазу"}
+            ? t("Перенести и удалить фазу")
+            : t("Удалить фазу")}
         </Btn>
       </div>
     </Modal>

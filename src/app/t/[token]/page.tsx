@@ -8,12 +8,17 @@ import {
   type Size,
   type Status,
 } from "@/lib/types";
-import { dateRu, parseDate } from "@/lib/schedule";
+import { parseDate } from "@/lib/schedule";
+import { getI18n } from "@/i18n/server";
+import LangSwitcher from "@/components/LangSwitcher";
 
-export const metadata: Metadata = {
-  title: "Задача · Planmaneger",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return {
+    title: `${t("Задача")} · Planmaneger`,
+    robots: { index: false, follow: false },
+  };
+}
 
 type Shared = {
   name: string;
@@ -36,6 +41,8 @@ export default async function SharedTaskPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
+  const i18n = await getI18n();
+  const { t } = i18n;
   let task: Shared | null = null;
   if (UUID.test(token)) {
     const supabase = await createClient();
@@ -46,36 +53,37 @@ export default async function SharedTaskPage({
   return (
     <div className="min-h-screen">
       <header className="border-b border-line px-4 py-4 md:px-6">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <Brand />
+          <LangSwitcher />
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-8 md:px-6">
         {!task ? (
           <div className="rounded-[17px] border border-line bg-white p-10 text-center">
-            <h1 className="text-xl font-extrabold">Ссылка недоступна</h1>
+            <h1 className="text-xl font-extrabold">{t("Ссылка недоступна")}</h1>
             <p className="mt-2 text-muted">
-              Задача не найдена или доступ по ссылке был отключён.
+              {t("Задача не найдена или доступ по ссылке был отключён.")}
             </p>
           </div>
         ) : (
           <article className="rounded-[17px] border border-line bg-white p-5 shadow-soft md:p-7">
             <div className="text-xs font-bold text-muted">
-              {task.project_name} · {task.phase_name}
+              {task.project_name} · {t(task.phase_name)}
             </div>
             <h1 className="mt-1.5 text-2xl font-extrabold tracking-tight md:text-3xl">
-              {task.name}
+              {t(task.name)}
             </h1>
 
             <div className="mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-              <Info label="Статус">
+              <Info label={t("Статус")}>
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-extrabold ${STATUS_META[task.status].badge}`}
                 >
-                  {STATUS_META[task.status].label}
+                  {t(STATUS_META[task.status].label)}
                 </span>
               </Info>
-              <Info label="Прогресс">
+              <Info label={t("Прогресс")}>
                 <div className="font-extrabold">
                   {task.status === "done" ? 100 : task.progress}%
                 </div>
@@ -88,42 +96,42 @@ export default async function SharedTaskPage({
                   />
                 </div>
               </Info>
-              <Info label="Размер">
+              <Info label={t("Размер")}>
                 <span className="font-extrabold">{task.size}</span>{" "}
                 <span className="text-sm text-muted">
                   ·{" "}
                   {(task.size_days ?? DEFAULT_SIZE_DAYS)[task.size] ??
                     DEFAULT_SIZE_DAYS[task.size]}{" "}
-                  раб. дн.
+                  {t("раб. дн.")}
                 </span>
               </Info>
-              <Info label="Дедлайн">
+              <Info label={t("Дедлайн")}>
                 <span className="font-extrabold">
-                  {task.deadline ? dateRu(parseDate(task.deadline)) : "—"}
+                  {task.deadline ? i18n.date(parseDate(task.deadline)) : "—"}
                 </span>
               </Info>
             </div>
 
             <h2 className="mt-7 mb-2 text-xs font-extrabold tracking-[.07em] text-muted uppercase">
-              Описание
+              {t("Описание")}
             </h2>
             {task.description ? (
               <div className="rounded-[13px] border border-line p-4">
-                <RichViewer html={task.description} />
+                <RichViewer html={i18n.html(task.description)} />
               </div>
             ) : (
-              <p className="text-muted">Описание пока не добавлено.</p>
+              <p className="text-muted">{t("Описание пока не добавлено.")}</p>
             )}
 
             <p className="mt-6 text-xs text-muted">
-              Обновлено{" "}
-              {new Date(task.updated_at).toLocaleString("ru-RU", {
+              {t("Обновлено")}{" "}
+              {new Date(task.updated_at).toLocaleString(i18n.locale, {
                 day: "2-digit",
                 month: "long",
                 hour: "2-digit",
                 minute: "2-digit",
               })}{" "}
-              · только просмотр
+              · {t("только просмотр")}
             </p>
           </article>
         )}

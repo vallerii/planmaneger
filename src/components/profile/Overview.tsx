@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
 import {
   SECTIONS,
   freshness,
@@ -11,12 +12,13 @@ import {
   metricProgress,
   type ProfileItem,
 } from "@/lib/profile";
-import { dateRu, parseDate, todayISO } from "@/lib/schedule";
+import { parseDate, todayISO } from "@/lib/schedule";
 import type { ProfileCtx } from "./ProfileApp";
 import { Badge, FreshBadge } from "./fields";
 import Positioning from "./Positioning";
 
 export default function Overview({ ctx }: { ctx: ProfileCtx }) {
+  const { t, date } = useI18n();
   const { profile, items } = ctx;
   const score = readiness(profile, items);
   const icps = ctx.byKind("icp");
@@ -55,9 +57,9 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
       {/* метрики */}
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
         <Metric
-          label="Готовность Discovery"
+          label={t("Готовность Discovery")}
           value={`${score}%`}
-          hint="Насколько уменьшилась неопределённость"
+          hint={t("Насколько уменьшилась неопределённость")}
         >
           <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae3]">
             <span
@@ -67,35 +69,35 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
           </div>
         </Metric>
         <Metric
-          label="ICP подтверждено"
+          label={t("ICP подтверждено")}
           value={`${icpOk} / ${icps.length}`}
-          hint="целевых сегментов"
+          hint={t("целевых сегментов")}
         />
         <Metric
-          label="Гипотезы"
+          label={t("Гипотезы")}
           value={`${hypClosed} / ${hyps.length}`}
-          hint={`проверено · ${hypOpen.length} в работе`}
+          hint={t("проверено · {n} в работе", { n: hypOpen.length })}
         />
         <Metric
-          label="Клиентов исследовано"
+          label={t("Клиентов исследовано")}
           value={`${researched} / ${PROSPECT_TARGET}`}
-          hint="на вкладке «Рынок»"
+          hint={t("на вкладке «Рынок»")}
         />
         <Metric
-          label="Требуют внимания"
+          label={t("Требуют внимания")}
           value={String(
             attention.filter(
               (a) => a.f.kind === "stale" || a.f.kind === "empty",
             ).length,
           )}
-          hint="пустые или старше 14 дней"
+          hint={t("пустые или старше 14 дней")}
         />
       </div>
 
       {/* миссия + позиционирование */}
       <div className="rounded-[17px] border border-line bg-white p-5">
         <div className="text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-          Миссия
+          {t("Миссия")}
         </div>
         {profile.mission.trim() ? (
           <p className="mt-1 text-lg leading-snug font-bold">
@@ -106,13 +108,13 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
             onClick={() => ctx.goTo("foundation", "mission")}
             className="mt-1 text-sm font-bold text-accent hover:underline"
           >
-            + Сформулировать миссию
+            {t("+ Сформулировать миссию")}
           </button>
         )}
         {ctx.canCycle && profile.vision?.trim() && (
           <>
             <div className="mt-4 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-              Видение
+              {t("Видение")}
             </div>
             <p className="mt-1 leading-snug text-[#45443e]">{profile.vision}</p>
           </>
@@ -128,16 +130,16 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
         <div className="rounded-[17px] border border-line bg-white">
           <div className="border-b border-[#efede6] px-5 py-4">
             <h2 className="text-lg font-extrabold tracking-tight">
-              Что требует внимания
+              {t("Что требует внимания")}
             </h2>
             <p className="text-sm text-muted">
-              Пустые разделы и то, что давно не обновлялось.
+              {t("Пустые разделы и то, что давно не обновлялось.")}
             </p>
           </div>
           <div className="p-2">
             {attention.length === 0 ? (
               <p className="px-3 py-6 text-center text-sm text-muted">
-                Все разделы заполнены и свежие 👌
+                {t("Все разделы заполнены и свежие 👌")}
               </p>
             ) : (
               attention.map((s) => (
@@ -149,14 +151,14 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
                     onClick={() => ctx.goTo(s.tab, s.id)}
                     className="min-w-0 flex-1 truncate text-left text-sm font-bold hover:underline"
                   >
-                    {s.label}
+                    {t(s.label)}
                   </button>
                   <FreshBadge f={s.f} />
                   {(s.f.kind === "review" || s.f.kind === "stale") && (
                     <button
                       onClick={() => ctx.markReviewed(s.id)}
                       className="rounded-[7px] px-1.5 py-0.5 text-xs font-bold text-muted hover:bg-white hover:text-ok"
-                      title="Проверили — актуально"
+                      title={t("Проверили — актуально")}
                     >
                       ✓
                     </button>
@@ -173,11 +175,10 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
             className={`rounded-[17px] border bg-white p-5 ${reviewDue ? "border-[#edd48e]" : "border-line"}`}
           >
             <h2 className="text-lg font-extrabold tracking-tight">
-              Следующий review
+              {t("Следующий review")}
             </h2>
             <p className="text-sm text-muted">
-              Раз в 2 недели проходим по разделам: обновляем или отмечаем
-              «актуально».
+              {t("Раз в 2 недели проходим по разделам: обновляем или отмечаем «актуально».")}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <input
@@ -192,9 +193,9 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
                 onClick={() => ctx.saveProfile({ next_review: plusDays(14) })}
                 className="rounded-[10px] border border-line px-3 py-2 text-sm font-bold hover:bg-[#f5f4ef]"
               >
-                +14 дней от сегодня
+                {t("+14 дней от сегодня")}
               </button>
-              {reviewDue && <Badge tone="yellow">пора провести review</Badge>}
+              {reviewDue && <Badge tone="yellow">{t("пора провести review")}</Badge>}
             </div>
           </div>
 
@@ -202,13 +203,13 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
           <div className="rounded-[17px] border border-line bg-white">
             <div className="border-b border-[#efede6] px-5 py-4">
               <h2 className="text-lg font-extrabold tracking-tight">
-                Ближайшие дедлайны гипотез
+                {t("Ближайшие дедлайны гипотез")}
               </h2>
             </div>
             <div className="p-2">
               {deadlines.length === 0 ? (
                 <p className="px-3 py-6 text-center text-sm text-muted">
-                  Нет открытых гипотез с дедлайном.
+                  {t("Нет открытых гипотез с дедлайном.")}
                 </p>
               ) : (
                 deadlines.map((h: ProfileItem) => {
@@ -221,13 +222,13 @@ export default function Overview({ ctx }: { ctx: ProfileCtx }) {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-[#faf9f6]"
                     >
                       <span className="min-w-0 flex-1 truncate text-sm">
-                        {h.title || "Без формулировки"}
+                        {h.title || t("Без формулировки")}
                       </span>
-                      <Badge tone={st.tone}>{st.label}</Badge>
+                      <Badge tone={st.tone}>{t(st.label)}</Badge>
                       <span
                         className={`w-16 shrink-0 text-right text-xs font-bold ${overdue ? "text-bad" : "text-muted"}`}
                       >
-                        {dateRu(parseDate(h.data.deadline)).replace(
+                        {date(parseDate(h.data.deadline)).replace(
                           / \d{4}$/,
                           "",
                         )}
@@ -294,6 +295,7 @@ export function Statement({ text }: { text: string }) {
 }
 
 function NorthStarLine({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const m = northStar(ctx.items);
   if (!m)
     return (
@@ -301,7 +303,7 @@ function NorthStarLine({ ctx }: { ctx: ProfileCtx }) {
         onClick={() => ctx.goTo("metrics", "metric")}
         className="mt-4 block text-sm font-bold text-accent hover:underline"
       >
-        + Задать главную метрику (North Star)
+        {t("+ Задать главную метрику (North Star)")}
       </button>
     );
   const pct = metricProgress(m.data);
@@ -320,12 +322,12 @@ function NorthStarLine({ ctx }: { ctx: ProfileCtx }) {
           ★ North Star
         </span>
         <span className="min-w-0 flex-1 truncate font-bold">
-          {m.title || "Без названия"}
+          {m.title || t("Без названия")}
         </span>
         <span className="font-extrabold tabular-nums">
           {fmt(m.data.current)}
         </span>
-        <span className="text-xs text-muted">цель {fmt(m.data.target)}</span>
+        <span className="text-xs text-muted">{t("цель")} {fmt(m.data.target)}</span>
       </div>
       {pct !== null && (
         <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae3]">

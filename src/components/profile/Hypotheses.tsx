@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
 import { useState } from "react";
 import {
   HYP_TYPES,
@@ -37,6 +38,7 @@ const isOpen = (h: ProfileItem) =>
   h.status === "todo" || h.status === "testing";
 
 export default function Hypotheses({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const [filter, setFilter] = useState<Filter>("all");
   const all = ctx.byKind("hypothesis");
@@ -45,18 +47,18 @@ export default function Hypotheses({ ctx }: { ctx: ProfileCtx }) {
   );
   const icpOptions = ctx
     .byKind("icp")
-    .map((i) => ({ value: i.id, label: i.title || "ICP без названия" }));
+    .map((i) => ({ value: i.id, label: i.title || t("ICP без названия") }));
   const problemOptions = ctx
     .byKind("problem")
-    .map((p) => ({ value: p.id, label: p.title || "Проблема без названия" }));
+    .map((p) => ({ value: p.id, label: p.title || t("Проблема без названия") }));
   const openCount = all.filter(isOpen).length;
 
   return (
     <div className="flex flex-col gap-5">
       <Section
         id="hypothesis"
-        title="Гипотезы"
-        desc="Что мы считаем правдой, но ещё не проверили. У каждой гипотезы — способ проверки, критерий успеха и срок."
+        title={t("Гипотезы")}
+        desc={t("Что мы считаем правдой, но ещё не проверили. У каждой гипотезы — способ проверки, критерий успеха и срок.")}
         fresh={freshness("hypothesis", profile, items)}
         onReviewed={() => ctx.markReviewed("hypothesis")}
       >
@@ -79,7 +81,7 @@ export default function Hypotheses({ ctx }: { ctx: ProfileCtx }) {
                       : "bg-[#f5f4ef] text-muted hover:text-ink"
                   }`}
                 >
-                  {f.label} <span className="opacity-60">{n}</span>
+                  {t(f.label)} <span className="opacity-60">{n}</span>
                 </button>
               );
             })}
@@ -88,11 +90,10 @@ export default function Hypotheses({ ctx }: { ctx: ProfileCtx }) {
 
         {all.length === 0 ? (
           <Empty>
-            Гипотез пока нет. Начните с самой рискованной: «Если это окажется
-            неправдой — продукт не взлетит».
+            {t("Гипотез пока нет. Начните с самой рискованной: «Если это окажется неправдой — продукт не взлетит».")}
           </Empty>
         ) : list.length === 0 ? (
-          <Empty>В этом фильтре ничего нет.</Empty>
+          <Empty>{t("В этом фильтре ничего нет.")}</Empty>
         ) : (
           <div className="flex flex-col gap-3">
             {list.map((h) => (
@@ -111,7 +112,7 @@ export default function Hypotheses({ ctx }: { ctx: ProfileCtx }) {
             ctx.addItem("hypothesis", { type: "problem", priority: "medium" })
           }
         >
-          + Добавить гипотезу
+          {t("+ Добавить гипотезу")}
         </AddBtn>
       </Section>
     </div>
@@ -129,6 +130,7 @@ function HypothesisCard({
   icpOptions: { value: string; label: string }[];
   problemOptions: { value: string; label: string }[];
 }) {
+  const t = useT();
   const st = statusOf("hypothesis", h.status);
   const closed = !isOpen(h);
   const overdue = !closed && h.data.deadline && h.data.deadline < todayISO();
@@ -151,7 +153,7 @@ function HypothesisCard({
           <AutoText
             value={h.title}
             onSave={(v) => ctx.updateItem(h.id, { title: v })}
-            placeholder="Мы считаем, что [кто] [сделает что / испытывает что], потому что [почему]"
+            placeholder={t("Мы считаем, что [кто] [сделает что / испытывает что], потому что [почему]")}
             className="font-bold"
             rows={1}
           />
@@ -166,7 +168,7 @@ function HypothesisCard({
 
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-5">
         <div>
-          <Label>Тип</Label>
+          <Label>{t("Тип")}</Label>
           <Pick
             value={h.data.type ?? ""}
             options={HYP_TYPES}
@@ -174,7 +176,7 @@ function HypothesisCard({
           />
         </div>
         <div>
-          <Label>Приоритет</Label>
+          <Label>{t("Приоритет")}</Label>
           <Pick
             value={h.data.priority ?? ""}
             options={PRIORITIES}
@@ -190,7 +192,7 @@ function HypothesisCard({
           />
         </div>
         <div>
-          <Label>Проблема</Label>
+          <Label>{t("Проблема")}</Label>
           <Pick
             value={h.data.problem_id ?? ""}
             options={problemOptions}
@@ -198,7 +200,7 @@ function HypothesisCard({
           />
         </div>
         <div>
-          <Label hint={overdue ? "просрочено" : undefined}>Дедлайн</Label>
+          <Label hint={overdue ? t("просрочено") : undefined}>{t("Дедлайн")}</Label>
           <input
             type="date"
             value={h.data.deadline ?? ""}
@@ -214,19 +216,19 @@ function HypothesisCard({
         className={`mt-3 grid gap-3 ${ctx.canCycle ? "md:grid-cols-3" : "md:grid-cols-2"}`}
       >
         <div>
-          <Label>Как проверяем</Label>
+          <Label>{t("Как проверяем")}</Label>
           <AutoText
             value={h.data.method ?? ""}
             onSave={(v) => set({ method: v })}
-            placeholder="10 интервью, лендинг с оплатой, ручной пилот…"
+            placeholder={t("10 интервью, лендинг с оплатой, ручной пилот…")}
           />
         </div>
         <div>
-          <Label>Критерий успеха</Label>
+          <Label>{t("Критерий успеха")}</Label>
           <AutoText
             value={h.data.criterion ?? ""}
             onSave={(v) => set({ criterion: v })}
-            placeholder="Например: 6 из 10 назвали проблему сами, 3 готовы платить"
+            placeholder={t("Например: 6 из 10 назвали проблему сами, 3 готовы платить")}
           />
         </div>
         {ctx.canCycle && (
@@ -239,13 +241,13 @@ function HypothesisCard({
       </div>
 
       <div className="mt-3">
-        <Label hint={closed ? undefined : "заполните, когда закроете гипотезу"}>
-          Результат и вывод
+        <Label hint={closed ? undefined : t("заполните, когда закроете гипотезу")}>
+          {t("Результат и вывод")}
         </Label>
         <AutoText
           value={h.data.result ?? ""}
           onSave={(v) => set({ result: v })}
-          placeholder="Что узнали и что меняем в продукте"
+          placeholder={t("Что узнали и что меняем в продукте")}
           className={closed ? "!bg-[#fff9e8]" : ""}
         />
       </div>
@@ -256,6 +258,7 @@ function HypothesisCard({
 }
 
 function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
+  const { t, rich } = useI18n();
   const linked = ctx.tasks.filter((t) => t.hypothesis_id === h.id);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -287,7 +290,7 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
     <div className="mt-3 rounded-[11px] bg-[#faf9f6] px-3 py-2.5">
       <div className="flex items-center gap-2">
         <span className="text-[11px] font-bold text-muted">
-          Задачи на доске для проверки
+          {t("Задачи на доске для проверки")}
         </span>
         <span className="text-[11px] text-[#aaa]">{linked.length || ""}</span>
         <div className="flex-1" />
@@ -296,34 +299,34 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
             onClick={start}
             className="text-xs font-bold text-muted hover:text-ink"
           >
-            + Создать задачу
+            {t("+ Создать задачу")}
           </button>
         )}
       </div>
 
       {linked.length > 0 && (
         <ul className="mt-1.5 flex flex-col gap-1">
-          {linked.map((t) => {
-            const meta = STATUS_META[t.status as Status] ?? STATUS_META.todo;
+          {linked.map((lt) => {
+            const meta = STATUS_META[lt.status as Status] ?? STATUS_META.todo;
             return (
-              <li key={t.id}>
+              <li key={lt.id}>
                 <Link
-                  href={`/projects/${ctx.projectId}?task=${t.id}`}
+                  href={`/projects/${ctx.projectId}?task=${lt.id}`}
                   className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white"
                 >
                   <span
                     className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`}
                   />
                   <span className="min-w-0 flex-1 truncate text-sm">
-                    {t.name}
+                    {t(lt.name)}
                   </span>
                   <span className="hidden shrink-0 text-xs text-muted sm:inline">
-                    {phaseName(t.phase_id)}
+                    {phaseName(lt.phase_id)}
                   </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold ${meta.badge}`}
                   >
-                    {meta.label}
+                    {t(meta.label)}
                   </span>
                 </Link>
               </li>
@@ -335,14 +338,16 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
       {open &&
         (ctx.phases.length === 0 ? (
           <p className="mt-2 text-sm text-muted">
-            Сначала создайте хотя бы одну фазу на{" "}
-            <Link
-              href={`/projects/${ctx.projectId}`}
-              className="font-bold underline"
-            >
-              доске
-            </Link>
-            .
+            {rich("Сначала создайте хотя бы одну фазу на {board}.", {
+              board: (
+                <Link
+                  href={`/projects/${ctx.projectId}`}
+                  className="font-bold underline"
+                >
+                  {t("доске")}
+                </Link>
+              ),
+            })}
           </p>
         ) : (
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -354,7 +359,7 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
                 if (e.key === "Enter") create();
                 if (e.key === "Escape") setOpen(false);
               }}
-              placeholder="Название задачи"
+              placeholder={t("Название задачи")}
               className="h-[36px] min-w-0 flex-1 rounded-lg border border-line bg-white px-3 text-sm outline-none focus:border-ink/30"
             />
             <div className="sm:w-[190px]">
@@ -375,21 +380,22 @@ function LinkedTasks({ h, ctx }: { h: ProfileItem; ctx: ProfileCtx }) {
                 disabled={busy || !name.trim()}
                 className="h-[36px] rounded-lg bg-ink px-3 text-sm font-bold text-white disabled:opacity-40"
               >
-                {busy ? "…" : "Создать"}
+                {busy ? "…" : t("Создать")}
               </button>
               <button
                 onClick={() => setOpen(false)}
                 className="h-[36px] rounded-lg px-2.5 text-sm font-bold text-muted hover:text-ink"
               >
-                Отмена
+                {t("Отмена")}
               </button>
             </div>
           </div>
         ))}
       {open && ctx.phases.length > 0 && (
         <p className="mt-1.5 text-[11px] text-[#aaa]">
-          Задача появится в конце выбранной фазы, размер S
-          {h.data.deadline ? ", дедлайн — как у гипотезы" : ""}.
+          {h.data.deadline
+            ? t("Задача появится в конце выбранной фазы, размер S, дедлайн — как у гипотезы.")
+            : t("Задача появится в конце выбранной фазы, размер S.")}
         </p>
       )}
     </div>

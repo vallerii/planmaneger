@@ -50,12 +50,24 @@ export type ProfileStep = LegacyStep | CycleStep;
 
 /** ratio — частичное выполнение пункта (0–1), например «4 из 10». */
 export type CheckItem = {
+  /** русский текст — ключ словаря интерфейса; выводить через checkLabel() */
   label: string;
   done: boolean;
   tab: Tab;
   sec: string;
   ratio?: number;
+  /** счётчик «k из of» — добавляется к label при выводе */
+  count?: { k: number; of: number };
 };
+
+/** Подпись пункта чек-листа на языке интерфейса: «Гипотезы: 2 из 3». */
+export const checkLabel = (
+  c: CheckItem,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+) =>
+  c.count
+    ? `${t(c.label)}: ${t("{k} из {of}", { k: c.count.k, of: c.count.of })}`
+    : t(c.label);
 
 /** Повторные задачи: считают только изменения после counted_from. */
 export const REPEAT_STEPS: ReadonlySet<ProfileStep> = new Set<ProfileStep>([
@@ -450,7 +462,8 @@ export function stepChecklist(
   const m = profile.mvp ?? {};
   const e = profile.economics ?? {};
   const cnt = (label: string, k: number, of: number, tab: Tab, sec: string) => ({
-    label: `${label}: ${Math.min(k, of)} из ${of}`,
+    label,
+    count: { k: Math.min(k, of), of },
     done: k >= of,
     ratio: ratio(k, of),
     tab,

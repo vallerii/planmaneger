@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { freshness, type MarketSize as MS } from "@/lib/profile";
 import {
   CURRENCIES,
@@ -36,6 +37,7 @@ const LEVELS = [
 ];
 
 export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const ms: MS = profile.market_size ?? {};
   const cur = profile.economics?.currency ?? "EUR";
@@ -66,8 +68,8 @@ export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
   return (
     <Section
       id="market_size"
-      title="Размер рынка"
-      desc="TAM → SAM → SOM: от всего рынка к той части, которую реально занять. Главное — не цифра, а расчёт: откуда она взялась."
+      title={t("Размер рынка")}
+      desc={t("TAM → SAM → SOM: от всего рынка к той части, которую реально занять. Главное — не цифра, а расчёт: откуда она взялась.")}
       fresh={freshness("market_size", profile, items)}
       onReviewed={() => ctx.markReviewed("market_size")}
     >
@@ -83,19 +85,19 @@ export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
                   <div className="flex items-baseline gap-1.5">
                     <span className="text-sm font-extrabold">{l.name}</span>
                     <span className="text-xs font-bold text-muted">
-                      {l.label}
+                      {t(l.label)}
                     </span>
                   </div>
                   <div className="mt-1">
                     <NumField
                       value={ms[l.key]?.value}
                       onSave={(x) => set(l.key, { value: x })}
-                      suffix={`${sym}/год`}
+                      suffix={`${sym}/${t("год")}`}
                     />
                   </div>
                   {bad && (
                     <p className="mt-1 text-[11px] font-bold text-bad">
-                      Больше, чем {LEVELS[i - 1].name}
+                      {t("Больше, чем {x}", { x: LEVELS[i - 1].name })}
                     </p>
                   )}
                   {i > 0 && parent > 0 && v(l.key) > 0 && !bad && (
@@ -103,16 +105,16 @@ export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
                       {((v(l.key) / parent) * 100).toFixed(
                         v(l.key) / parent < 0.1 ? 1 : 0,
                       )}
-                      % от {LEVELS[i - 1].name}
+                      % {t("от {x}", { x: LEVELS[i - 1].name })}
                     </p>
                   )}
                 </div>
                 <div>
-                  <div className="mb-1 text-[11px] text-muted">{l.hint}</div>
+                  <div className="mb-1 text-[11px] text-muted">{t(l.hint)}</div>
                   <AutoText
                     value={ms[l.key]?.calc ?? ""}
                     onSave={(x) => set(l.key, { calc: x })}
-                    placeholder={l.ph}
+                    placeholder={t(l.ph)}
                   />
                 </div>
               </div>
@@ -142,8 +144,9 @@ export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
           ))}
           {v("som") > 0 && year1 > 0 && (
             <p className="mt-2 text-[11px] leading-snug text-muted">
-              Прогноз выручки за первые 12 мес. из «Экономики» —{" "}
-              {money(year1, cur)}, это{" "}
+              {t("Прогноз выручки за первые 12 мес. из «Экономики» — {sum}, это", {
+                sum: money(year1, cur),
+              })}{" "}
               <b className="text-ink">
                 {((year1 / v("som")) * 100).toFixed(1)}% SOM
               </b>
@@ -151,7 +154,7 @@ export default function MarketSize({ ctx }: { ctx: ProfileCtx }) {
               {year1 > v("som") && (
                 <span className="text-bad">
                   {" "}
-                  Прогноз больше SOM — проверьте цифры.
+                  {t("Прогноз больше SOM — проверьте цифры.")}
                 </span>
               )}
             </p>

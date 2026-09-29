@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { STATUSES, STATUS_META, type Status } from "@/lib/types";
@@ -18,7 +19,6 @@ import {
   initials,
   remainingTaskDays,
   sizeDays as sizeOf,
-  workdaysLabel,
 } from "@/lib/schedule";
 import Link from "next/link";
 import {
@@ -26,6 +26,7 @@ import {
   countSince,
   countedFromPatch,
   stepChecklist,
+  checkLabel,
   stepHref,
   stepProgress,
   type CheckItem,
@@ -65,12 +66,6 @@ type Props = {
   readOnly?: boolean;
 };
 
-const commentTime = new Intl.DateTimeFormat("ru-RU", {
-  day: "2-digit",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-});
 
 export default function TaskDrawer({
   task,
@@ -90,6 +85,17 @@ export default function TaskDrawer({
   freshCommentIds,
   readOnly = false,
 }: Props) {
+  const { t, locale, workdays, html, lang } = useI18n();
+  const commentTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    [locale],
+  );
   const isCreate = mode === "create";
   const supabase = useMemo(() => createClient(), []);
   const [open, setOpen] = useState(false);
@@ -261,7 +267,7 @@ export default function TaskDrawer({
   }
 
   async function deleteComment(id: string) {
-    if (!confirm("Удалить комментарий?")) return;
+    if (!confirm(t("Удалить комментарий?"))) return;
     setComments((cs) => cs?.filter((c) => c.id !== id) ?? cs);
     onError((await supabase.from("comments").delete().eq("id", id)).error);
   }
@@ -360,10 +366,10 @@ export default function TaskDrawer({
             ×
           </button>
           <input
-            value={title}
+            value={readOnly ? t(title) : title}
             readOnly={readOnly}
             autoFocus={isCreate}
-            placeholder={isCreate ? "Название задачи" : undefined}
+            placeholder={isCreate ? t("Название задачи") : undefined}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => {
               if (isCreate) return;
@@ -384,8 +390,8 @@ export default function TaskDrawer({
           {!isCreate && !readOnly && (
             <button
               onClick={() => setShareOpen(true)}
-              title="Поделиться ссылкой на задачу"
-              aria-label="Поделиться ссылкой"
+              title={t("Поделиться ссылкой на задачу")}
+              aria-label={t("Поделиться ссылкой")}
               className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[8px] transition hover:bg-[#f0efe9] hover:text-ink ${task.share_token ? "text-[#1d4f9a]" : "text-[#9a988f]"}`}
             >
               <LinkIcon />
@@ -394,8 +400,8 @@ export default function TaskDrawer({
           {!isCreate && !readOnly && onDelete && (
             <button
               onClick={onDelete}
-              title="Удалить задачу"
-              aria-label="Удалить задачу"
+              title={t("Удалить задачу")}
+              aria-label={t("Удалить задачу")}
               className={trashBtnCls + " h-[34px] w-[34px]"}
             >
               <TrashIcon size={16} />
@@ -406,15 +412,14 @@ export default function TaskDrawer({
         <div className="overflow-auto p-[18px]">
           {readOnly && (
             <div className="mb-3 rounded-[10px] bg-[#e6effc] px-3 py-2 text-sm text-[#1d4f9a]">
-              👁 Только просмотр — изменять задачу и писать комментарии может
-              команда проекта.
+              {t("👁 Только просмотр — изменять задачу и писать комментарии может команда проекта.")}
             </div>
           )}
           {/* fieldset disabled — все поля ниже недоступны для правки */}
           <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div className={card}>
-              <label className={lbl}>Размер</label>
+              <label className={lbl}>{t("Размер")}</label>
               <Select
                 value={task.size}
                 onChange={(v: Size) => onUpdate({ size: v })}
@@ -422,12 +427,12 @@ export default function TaskDrawer({
                 options={SIZES.map((s) => ({
                   value: s,
                   label: s,
-                  hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
+                  hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? t("день") : t("дн.")}`,
                 }))}
               />
             </div>
             <div className={card}>
-              <label className={lbl}>Статус</label>
+              <label className={lbl}>{t("Статус")}</label>
               <Select
                 value={task.status}
                 onChange={(v: Status) => setStatus(v)}
@@ -445,7 +450,7 @@ export default function TaskDrawer({
                       <span
                         className={`h-2 w-2 rounded-full ${STATUS_META[st].dot}`}
                       />
-                      {STATUS_META[st].label}
+                      {t(STATUS_META[st].label)}
                     </span>
                   ),
                 }))}
@@ -453,7 +458,7 @@ export default function TaskDrawer({
             </div>
             {step ? (
               <div className={card}>
-                <label className={lbl}>Прогресс · из профиля</label>
+                <label className={lbl}>{t("Прогресс · из профиля")}</label>
                 <div className="flex items-center gap-2">
                   <div className="h-[6px] flex-1 overflow-hidden rounded-full bg-[#eceae3]">
                     <span
@@ -467,17 +472,19 @@ export default function TaskDrawer({
                 </div>
                 <div className="mt-1 text-[11px] text-muted">
                   {task.status === "done"
-                    ? "Задача закрыта вручную"
+                    ? t("Задача закрыта вручную")
                     : since === WAITING
-                      ? "Начнёт считать, когда задача будет взята в работу"
+                      ? t("Начнёт считать, когда задача будет взята в работу")
                       : since
-                        ? `Считает изменения с ${new Date(since).toLocaleDateString("ru-RU")}`
-                        : "До 99% — закройте статусом «Готово», когда решите"}
+                        ? t("Считает изменения с {date}", {
+                            date: new Date(since).toLocaleDateString(locale),
+                          })
+                        : t("До 99% — закройте статусом «Готово», когда решите")}
                 </div>
               </div>
             ) : (
               <div className={card}>
-                <label className={lbl}>Прогресс</label>
+                <label className={lbl}>{t("Прогресс")}</label>
                 <div className="grid grid-cols-[1fr_64px] items-center gap-2">
                   <input
                     type="range"
@@ -501,17 +508,17 @@ export default function TaskDrawer({
               </div>
             )}
             <div className={card}>
-              <label className={lbl}>Осталось работы</label>
+              <label className={lbl}>{t("Осталось работы")}</label>
               <div className="text-xl font-extrabold tracking-tight">
-                {workdaysLabel(remainingTaskDays(task, sizeDays))}
+                {workdays(remainingTaskDays(task, sizeDays))}
               </div>
               <div className="mt-1 text-[11px] text-muted">
-                {task.size} = {fmtDays(sizeOf(task, sizeDays))} дн. ·{" "}
-                {task.progress}% готово
+                {task.size} = {fmtDays(sizeOf(task, sizeDays))} {t("дн.")} ·{" "}
+                {task.progress}% {t("готово")}
               </div>
             </div>
             <div className={card}>
-              <label className={lbl}>Дедлайн</label>
+              <label className={lbl}>{t("Дедлайн")}</label>
               <input
                 type="date"
                 className={inp}
@@ -520,24 +527,24 @@ export default function TaskDrawer({
               />
             </div>
             <div className={card}>
-              <label className={lbl}>Успеваем к дедлайну?</label>
+              <label className={lbl}>{t("Успеваем к дедлайну?")}</label>
               <DeadlineHint task={task} sizeDays={sizeDays} />
             </div>
             {step && (
               <div className={card + " sm:col-span-2"}>
                 <div className="flex items-baseline gap-2">
-                  <label className={lbl}>Что заполнено в профиле</label>
+                  <label className={lbl}>{t("Что заполнено в профиле")}</label>
                   {check && (
                     <span className="ml-auto text-[11px] font-bold text-muted">
-                      {check.filter((c) => c.done).length} из {check.length}
+                      {t("{k} из {of}", { k: check.filter((c) => c.done).length, of: check.length })}
                     </span>
                   )}
                 </div>
                 {!check ? (
-                  <div className="text-sm text-muted">Загрузка…</div>
+                  <div className="text-sm text-muted">{t("Загрузка…")}</div>
                 ) : check.length === 0 ? (
                   <div className="text-sm text-muted">
-                    Не удалось загрузить профиль.
+                    {t("Не удалось загрузить профиль.")}
                   </div>
                 ) : (
                   <ul className="flex flex-col gap-0.5">
@@ -559,11 +566,11 @@ export default function TaskDrawer({
                           <span
                             className={c.done ? "text-muted" : "font-semibold"}
                           >
-                            {c.label}
+                            {checkLabel(c, t)}
                           </span>
                           {!c.done && (
                             <span className="ml-auto text-xs font-bold text-muted">
-                              заполнить →
+                              {t("заполнить →")}
                             </span>
                           )}
                         </Link>
@@ -575,7 +582,7 @@ export default function TaskDrawer({
                   task.status === "done" &&
                   check.some((c) => !c.done) && (
                     <p className="mt-1.5 text-xs text-[#6b4c00]">
-                      Задача закрыта, но в профиле есть пустые пункты.
+                      {t("Задача закрыта, но в профиле есть пустые пункты.")}
                     </p>
                   )}
               </div>
@@ -583,13 +590,13 @@ export default function TaskDrawer({
             {hypotheses && !step && (
               <div className={card + " sm:col-span-2"}>
                 <div className="flex items-baseline gap-2">
-                  <label className={lbl}>Проверяет гипотезу</label>
+                  <label className={lbl}>{t("Проверяет гипотезу")}</label>
                   {task.hypothesis_id && projectId && (
                     <Link
                       href={`/projects/${projectId}/profile?tab=hypotheses&item=${task.hypothesis_id}`}
                       className="ml-auto text-[11px] font-bold text-muted hover:text-ink"
                     >
-                      Открыть в профиле →
+                      {t("Открыть в профиле →")}
                     </Link>
                   )}
                 </div>
@@ -606,14 +613,14 @@ export default function TaskDrawer({
                       label: (
                         <span className="text-muted">
                           {hypotheses.length
-                            ? "— не связана"
-                            : "— гипотез пока нет в профиле"}
+                            ? t("— не связана")
+                            : t("— гипотез пока нет в профиле")}
                         </span>
                       ),
                     },
                     ...hypotheses.map((h) => ({
                       value: h.id,
-                      label: h.title.trim() || "Гипотеза без формулировки",
+                      label: h.title.trim() || t("Гипотеза без формулировки"),
                     })),
                   ]}
                 />
@@ -621,25 +628,27 @@ export default function TaskDrawer({
             )}
           </div>
 
-          <SectionTitle>Описание</SectionTitle>
+          <SectionTitle>{t("Описание")}</SectionTitle>
           </fieldset>
           <RichEditor
-            initial={task.description}
+            // только просмотр — показываем перевод шаблонных абзацев; в редактор — оригинал
+            key={readOnly ? lang : "edit"}
+            initial={readOnly ? html(task.description) : task.description}
             onChange={onDescChange}
             readOnly={readOnly}
           />
 
           {!isCreate && (
             <div className="mt-5 border-t border-line pt-1">
-              <SectionTitle>Обсуждение</SectionTitle>
+              <SectionTitle>{t("Обсуждение")}</SectionTitle>
               {comments === null ? (
-                <div className="py-4 text-[#999]">Загрузка…</div>
+                <div className="py-4 text-[#999]">{t("Загрузка…")}</div>
               ) : comments.length === 0 ? (
-                <div className="py-4 text-[#999]">Пока нет комментариев.</div>
+                <div className="py-4 text-[#999]">{t("Пока нет комментариев.")}</div>
               ) : (
                 comments.map((c) => {
                   const author =
-                    c.author?.full_name || c.author?.email || "Пользователь";
+                    c.author?.full_name || c.author?.email || t("Пользователь");
                   const fresh =
                     !!freshCommentIds?.has(c.id) && c.author_id !== me.id;
                   return (
@@ -662,7 +671,7 @@ export default function TaskDrawer({
                           </time>
                           {fresh && (
                             <span className="rounded-full bg-bad px-1.5 text-[10px] leading-4 font-black text-white">
-                              новое
+                              {t("новое")}
                             </span>
                           )}
                           {c.author_id === me.id && (
@@ -670,7 +679,7 @@ export default function TaskDrawer({
                               onClick={() => deleteComment(c.id)}
                               className="ml-auto text-xs text-[#aaa] opacity-0 group-hover:opacity-100 hover:text-bad"
                             >
-                              удалить
+                              {t("удалить")}
                             </button>
                           )}
                         </div>
@@ -693,7 +702,7 @@ export default function TaskDrawer({
                     if ((e.ctrlKey || e.metaKey) && e.key === "Enter")
                       addComment();
                   }}
-                  placeholder="Напишите комментарий или вставьте ссылку… (Ctrl+Enter — отправить)"
+                  placeholder={t("Напишите комментарий или вставьте ссылку… (Ctrl+Enter — отправить)")}
                   className="min-h-[72px] w-full resize-y border-0 bg-transparent outline-none"
                 />
                 <div className="mt-1.5 flex justify-end">
@@ -702,7 +711,7 @@ export default function TaskDrawer({
                     onClick={addComment}
                     disabled={!draft.trim() || sending}
                   >
-                    Отправить
+                    {t("Отправить")}
                   </Btn>
                 </div>
               </div>
@@ -712,16 +721,16 @@ export default function TaskDrawer({
         {isCreate && (
           <div className="mt-auto flex items-center justify-between gap-3 border-t border-line bg-white px-[18px] py-3.5">
             <span className="text-[11px] text-muted">
-              Комментарии появятся после создания задачи
+              {t("Комментарии появятся после создания задачи")}
             </span>
             <div className="flex gap-2">
-              <Btn onClick={close}>Отмена</Btn>
+              <Btn onClick={close}>{t("Отмена")}</Btn>
               <Btn
                 variant="primary"
                 onClick={submitCreate}
                 disabled={!title.trim()}
               >
-                Создать задачу
+                {t("Создать задачу")}
               </Btn>
             </div>
           </div>
@@ -772,6 +781,7 @@ function Linkified({ text }: { text: string }) {
 }
 
 function DeadlineHint({ task, sizeDays }: { task: Task; sizeDays: SizeDays }) {
+  const { t, workdays } = useI18n();
   const st = deadlineStatus(task, sizeDays);
   const big = "text-xl font-extrabold tracking-tight";
   const sub = "mt-1 text-[11px] text-muted";
@@ -779,48 +789,53 @@ function DeadlineHint({ task, sizeDays }: { task: Task; sizeDays: SizeDays }) {
     return (
       <>
         <div className={big + " text-[#b5b3aa]"}>—</div>
-        <div className={sub}>Поставьте дедлайн, чтобы проверить сроки</div>
+        <div className={sub}>{t("Поставьте дедлайн, чтобы проверить сроки")}</div>
       </>
     );
   if (st.kind === "done")
     return (
       <>
-        <div className={big + " text-ok"}>✓ Готово</div>
-        <div className={sub}>Задача выполнена</div>
+        <div className={big + " text-ok"}>{t("✓ Готово")}</div>
+        <div className={sub}>{t("Задача выполнена")}</div>
       </>
     );
   if (st.kind === "overdue")
     return (
       <>
-        <div className={big + " text-bad"}>Просрочено</div>
+        <div className={big + " text-bad"}>{t("Просрочено")}</div>
         <div className={sub}>
-          Дедлайн прошёл, осталось {workdaysLabel(st.need)} работы
+          {t("Дедлайн прошёл, осталось {n} работы", { n: workdays(st.need) })}
         </div>
       </>
     );
   if (st.kind === "late")
     return (
       <>
-        <div className={big + " text-bad"}>Не успеваем</div>
+        <div className={big + " text-bad"}>{t("Не успеваем")}</div>
         <div className={sub}>
-          Нужно {workdaysLabel(st.need)}, до дедлайна {workdaysLabel(st.avail)}
+          {t("Нужно {need}, до дедлайна {avail}", {
+            need: workdays(st.need),
+            avail: workdays(st.avail),
+          })}
         </div>
       </>
     );
   if (st.kind === "tight")
     return (
       <>
-        <div className={big + " text-[#9a6b00]"}>Впритык</div>
+        <div className={big + " text-[#9a6b00]"}>{t("Впритык")}</div>
         <div className={sub}>
-          Нужно {workdaysLabel(st.need)}, до дедлайна {workdaysLabel(st.avail)}{" "}
-          — без запаса
+          {t("Нужно {need}, до дедлайна {avail} — без запаса", {
+            need: workdays(st.need),
+            avail: workdays(st.avail),
+          })}
         </div>
       </>
     );
   return (
     <>
-      <div className={big + " text-ok"}>Успеваем</div>
-      <div className={sub}>Запас {workdaysLabel(st.slack)}</div>
+      <div className={big + " text-ok"}>{t("Успеваем")}</div>
+      <div className={sub}>{t("Запас {n}", { n: workdays(st.slack) })}</div>
     </>
   );
 }

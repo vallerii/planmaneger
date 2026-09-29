@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
@@ -15,6 +16,7 @@ export default function RichEditor({
   /** только просмотр: без панели инструментов и редактирования */
   readOnly?: boolean;
 }) {
+  const t = useT();
   const editor = useEditor({
     immediatelyRender: false,
     editable: !readOnly,
@@ -30,7 +32,7 @@ export default function RichEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({
-        placeholder: "Добавьте описание, заметки, чек-листы, ссылки…",
+        placeholder: t("Добавьте описание, заметки, чек-листы, ссылки…"),
       }),
     ],
     content: initial || "",
@@ -53,14 +55,14 @@ export default function RichEditor({
         : null,
   });
 
-  if (!editor) return <div className="rich text-[#aaa]">Загрузка…</div>;
+  if (!editor) return <div className="rich text-[#aaa]">{t("Загрузка…")}</div>;
 
   const tool = (on: boolean | undefined) =>
     `rounded-[7px] px-2 py-1.5 font-extrabold hover:bg-[#eceae4] ${on ? "bg-[#eceae4] text-ink" : "text-[#444]"}`;
 
   function setLink() {
     const prev = editor!.getAttributes("link").href as string | undefined;
-    let url = window.prompt("Вставьте ссылку (https://…)", prev ?? "");
+    let url = window.prompt(t("Вставьте ссылку (https://…)"), prev ?? "");
     if (url === null) return;
     url = url.trim();
     if (!url) {
@@ -95,14 +97,14 @@ export default function RichEditor({
       >
         <button
           className={tool(active?.bold)}
-          title="Жирный"
+          title={t("Жирный")}
           onClick={() => editor.chain().focus().toggleBold().run()}
         >
           B
         </button>
         <button
           className={tool(active?.italic)}
-          title="Курсив"
+          title={t("Курсив")}
           onClick={() => editor.chain().focus().toggleItalic().run()}
         >
           <i>I</i>
@@ -111,22 +113,22 @@ export default function RichEditor({
           className={tool(active?.bullet)}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
         >
-          • Список
+          {t("• Список")}
         </button>
         <button
           className={tool(active?.ordered)}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
         >
-          1. Список
+          {t("1. Список")}
         </button>
         <button
           className={tool(active?.task)}
           onClick={() => editor.chain().focus().toggleTaskList().run()}
         >
-          ☑ Чек-лист
+          {t("☑ Чек-лист")}
         </button>
         <button className={tool(active?.link)} onClick={setLink}>
-          🔗 Ссылка
+          {t("🔗 Ссылка")}
         </button>
       </div>
       <EditorContent editor={editor} />

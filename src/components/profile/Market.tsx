@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import {
   COMPETITOR_TYPES,
   PROSPECT_RESEARCHED,
@@ -23,12 +24,13 @@ import {
 } from "./fields";
 
 export default function Market({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const competitors = ctx.byKind("competitor");
   const prospects = ctx.byKind("prospect");
   const icpOptions = ctx
     .byKind("icp")
-    .map((i) => ({ value: i.id, label: i.title || "ICP без названия" }));
+    .map((i) => ({ value: i.id, label: i.title || t("ICP без названия") }));
 
   const researched = prospects.filter((p) =>
     PROSPECT_RESEARCHED.includes(p.status),
@@ -43,8 +45,7 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
   if (!ctx.canLinkTasks) {
     return (
       <Empty>
-        Вкладка «Рынок» заработает после запуска миграции 0004 (см. подсказку
-        выше).
+        {t("Вкладка «Рынок» заработает после запуска миграции 0004 (см. подсказку выше).")}
       </Empty>
     );
   }
@@ -53,7 +54,7 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
     <div className="flex flex-col gap-5">
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         <Metric
-          label="Клиентов исследовано"
+          label={t("Клиентов исследовано")}
           value={`${researched} / ${PROSPECT_TARGET}`}
         >
           <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-[#eceae3]">
@@ -64,34 +65,34 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
           </div>
         </Metric>
         <Metric
-          label="Разговоров"
+          label={t("Разговоров")}
           value={String(talked)}
-          hint="статус «Разговор» или «Пилот»"
+          hint={t("статус «Разговор» или «Пилот»")}
         />
         <Metric
-          label="Пилоты"
+          label={t("Пилоты")}
           value={String(pilots)}
-          hint="готовы попробовать / платить"
+          hint={t("готовы попробовать / платить")}
         />
         <Metric
-          label="Конкуренты"
+          label={t("Конкуренты")}
           value={String(competitors.length)}
-          hint={`глубоко изучено: ${deep}`}
+          hint={t("глубоко изучено: {n}", { n: deep })}
         />
       </div>
 
       {/* 10 ПОТЕНЦИАЛЬНЫХ КЛИЕНТОВ */}
       <Section
         id="prospect"
-        title="10 потенциальных клиентов"
-        desc="Реальные компании, места и люди, а не абстрактный сегмент. Двигайте статус по мере работы."
+        title={t("10 потенциальных клиентов")}
+        desc={t("Реальные компании, места и люди, а не абстрактный сегмент. Двигайте статус по мере работы.")}
         fresh={freshness("prospect", profile, items)}
         onReviewed={() => ctx.markReviewed("prospect")}
       >
         {prospects.length > 0 && <Funnel prospects={prospects} />}
         {prospects.length === 0 ? (
           <Empty>
-            Добавьте первого клиента, который, по-вашему, точно попадает в ICP.
+            {t("Добавьте первого клиента, который, по-вашему, точно попадает в ICP.")}
           </Empty>
         ) : (
           <div className="flex flex-col gap-3">
@@ -107,9 +108,9 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
           </div>
         )}
         <AddBtn onClick={() => ctx.addItem("prospect")}>
-          + Добавить клиента
+          {t("+ Добавить клиента")}
           {prospects.length < PROSPECT_TARGET
-            ? ` (${prospects.length} из ${PROSPECT_TARGET})`
+            ? ` (${t("{k} из {of}", { k: prospects.length, of: PROSPECT_TARGET })})`
             : ""}
         </AddBtn>
       </Section>
@@ -117,15 +118,14 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
       {/* КОНКУРЕНТЫ */}
       <Section
         id="competitor"
-        title="Конкуренты"
-        desc="Прямые, косвенные и альтернативы (Excel, агентство, «делаем руками»). Глубина — насколько хорошо мы их изучили."
+        title={t("Конкуренты")}
+        desc={t("Прямые, косвенные и альтернативы (Excel, агентство, «делаем руками»). Глубина — насколько хорошо мы их изучили.")}
         fresh={freshness("competitor", profile, items)}
         onReviewed={() => ctx.markReviewed("competitor")}
       >
         {competitors.length === 0 ? (
           <Empty>
-            Конкурентов пока нет. Начните с того, чем клиент решает проблему
-            сегодня.
+            {t("Конкурентов пока нет. Начните с того, чем клиент решает проблему сегодня.")}
           </Empty>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -140,7 +140,7 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
           </div>
         )}
         <AddBtn onClick={() => ctx.addItem("competitor", { type: "direct" })}>
-          + Добавить конкурента
+          {t("+ Добавить конкурента")}
         </AddBtn>
       </Section>
 
@@ -149,15 +149,15 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
       {/* ВЫВОДЫ */}
       <Section
         id="market"
-        title="Что мы узнали из анализа рынка"
-        desc="Главные выводы: где пустая ниша, за что платят, чего не хватает у конкурентов."
+        title={t("Что мы узнали из анализа рынка")}
+        desc={t("Главные выводы: где пустая ниша, за что платят, чего не хватает у конкурентов.")}
         fresh={freshness("market", profile, items)}
         onReviewed={() => ctx.markReviewed("market")}
       >
         <AutoText
           value={profile.market_notes ?? ""}
           onSave={(v) => ctx.saveProfile({ market_notes: v }, "market")}
-          placeholder="Например: у всех конкурентов долгий онбординг — никто не даёт результат в первый день."
+          placeholder={t("Например: у всех конкурентов долгий онбординг — никто не даёт результат в первый день.")}
           rows={4}
         />
       </Section>
@@ -166,6 +166,7 @@ export default function Market({ ctx }: { ctx: ProfileCtx }) {
 }
 
 function Funnel({ prospects }: { prospects: ProfileItem[] }) {
+  const t = useT();
   return (
     <div className="mb-4 flex flex-wrap gap-1.5">
       {STATUS.prospect.map((s) => {
@@ -177,7 +178,7 @@ function Funnel({ prospects }: { prospects: ProfileItem[] }) {
               n ? TONE[s.tone].badge : "bg-[#f5f4ef] text-[#aaa]"
             }`}
           >
-            {s.label} <span className="opacity-70">{n}</span>
+            {t(s.label)} <span className="opacity-70">{n}</span>
           </span>
         );
       })}
@@ -186,6 +187,7 @@ function Funnel({ prospects }: { prospects: ProfileItem[] }) {
 }
 
 function LinkOut({ url }: { url?: string }) {
+  const t = useT();
   if (!url?.trim()) return null;
   const href = /^https?:\/\//i.test(url.trim())
     ? url.trim()
@@ -196,7 +198,7 @@ function LinkOut({ url }: { url?: string }) {
       target="_blank"
       rel="noreferrer"
       className="shrink-0 rounded-[8px] px-2 py-1 text-sm font-bold text-muted hover:bg-[#f5f4ef] hover:text-ink"
-      title="Открыть ссылку"
+      title={t("Открыть ссылку")}
     >
       ↗
     </a>
@@ -214,6 +216,7 @@ function ProspectCard({
   ctx: ProfileCtx;
   icpOptions: { value: string; label: string }[];
 }) {
+  const t = useT();
   const set = (data: Record<string, unknown>) => ctx.updateItem(p.id, { data });
   return (
     <div
@@ -229,7 +232,7 @@ function ProspectCard({
           <AutoText
             value={p.title}
             onSave={(v) => ctx.updateItem(p.id, { title: v })}
-            placeholder="Компания или человек"
+            placeholder={t("Компания или человек")}
             className="font-bold"
             single
           />
@@ -243,12 +246,12 @@ function ProspectCard({
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div>
-          <Label>Сайт / карты / адрес</Label>
+          <Label>{t("Сайт / карты / адрес")}</Label>
           <div className="flex items-center gap-1">
             <AutoText
               value={p.data.url ?? ""}
               onSave={(v) => set({ url: v })}
-              placeholder="ссылка или адрес"
+              placeholder={t("ссылка или адрес")}
               single
             />
             <LinkOut url={p.data.url} />
@@ -263,29 +266,29 @@ function ProspectCard({
           />
         </div>
         <div>
-          <Label>Контакт</Label>
+          <Label>{t("Контакт")}</Label>
           <AutoText
             value={p.data.contact ?? ""}
             onSave={(v) => set({ contact: v })}
-            placeholder="Имя, LinkedIn, email"
+            placeholder={t("Имя, LinkedIn, email")}
             single
           />
         </div>
         <div className="md:col-span-3 grid gap-3 md:grid-cols-2">
           <div>
-            <Label>Почему подходит</Label>
+            <Label>{t("Почему подходит")}</Label>
             <AutoText
               value={p.data.why ?? ""}
               onSave={(v) => set({ why: v })}
-              placeholder="Видна проблема X, попадает в ICP #1"
+              placeholder={t("Видна проблема X, попадает в ICP #1")}
             />
           </div>
           <div>
-            <Label>Доказательства / что узнали</Label>
+            <Label>{t("Доказательства / что узнали")}</Label>
             <AutoText
               value={p.data.evidence ?? ""}
               onSave={(v) => set({ evidence: v })}
-              placeholder="Отзывы, сайт, итоги разговора"
+              placeholder={t("Отзывы, сайт, итоги разговора")}
             />
           </div>
         </div>
@@ -303,6 +306,7 @@ function CompetitorCard({
   ctx: ProfileCtx;
   icpOptions: { value: string; label: string }[];
 }) {
+  const t = useT();
   const set = (data: Record<string, unknown>) => ctx.updateItem(c.id, { data });
   return (
     <div
@@ -316,7 +320,7 @@ function CompetitorCard({
             value={c.data.type ?? ""}
             options={COMPETITOR_TYPES}
             onChange={(v) => set({ type: v || null })}
-            placeholder="Тип"
+            placeholder={t("Тип")}
           />
         </div>
         <div className="flex-1" />
@@ -332,7 +336,7 @@ function CompetitorCard({
         <AutoText
           value={c.title}
           onSave={(v) => ctx.updateItem(c.id, { title: v })}
-          placeholder="Название конкурента"
+          placeholder={t("Название конкурента")}
           className="font-bold"
           single
         />
@@ -341,7 +345,7 @@ function CompetitorCard({
         <AutoText
           value={c.data.url ?? ""}
           onSave={(v) => set({ url: v })}
-          placeholder="сайт"
+          placeholder={t("сайт")}
           single
           className="text-sm"
         />
@@ -349,53 +353,53 @@ function CompetitorCard({
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <Label>Для кого (ICP)</Label>
+          <Label>{t("Для кого (ICP)")}</Label>
           <Pick
             value={c.data.icp_id ?? ""}
-            placeholder="Все ICP"
+            placeholder={t("Все ICP")}
             options={icpOptions}
             onChange={(v) => set({ icp_id: v || null })}
           />
         </div>
         <div>
-          <Label>Цена</Label>
+          <Label>{t("Цена")}</Label>
           <AutoText
             value={c.data.price ?? ""}
             onSave={(v) => set({ price: v })}
-            placeholder="€199/мес"
+            placeholder={t("€199/мес")}
             single
           />
         </div>
       </div>
       <div className="mt-3">
-        <Label>Обещание</Label>
+        <Label>{t("Обещание")}</Label>
         <AutoText
           value={c.data.promise ?? ""}
           onSave={(v) => set({ promise: v })}
-          placeholder="«Сделаем X быстро»"
+          placeholder={t("«Сделаем X быстро»")}
           single
         />
       </div>
       <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <Label>Сильные стороны</Label>
+          <Label>{t("Сильные стороны")}</Label>
           <AutoText
             value={c.data.strengths ?? ""}
             onSave={(v) => set({ strengths: v })}
-            placeholder="UX, бренд, кейсы"
+            placeholder={t("UX, бренд, кейсы")}
           />
         </div>
         <div>
-          <Label>Слабые стороны</Label>
+          <Label>{t("Слабые стороны")}</Label>
           <AutoText
             value={c.data.weaknesses ?? ""}
             onSave={(v) => set({ weaknesses: v })}
-            placeholder="Долго начать, дорого"
+            placeholder={t("Долго начать, дорого")}
           />
         </div>
       </div>
       <div className="mt-3">
-        <Label>Ключевые люди</Label>
+        <Label>{t("Ключевые люди")}</Label>
         <AutoText
           value={c.data.people ?? ""}
           onSave={(v) => set({ people: v })}

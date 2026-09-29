@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,6 +25,7 @@ export default function ProjectTitle({
   /** вернуть false, чтобы отменить переход (например, есть несохранённое) */
   onBeforeNavigate?: (href: string) => boolean;
 }) {
+  const t = useT();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [editing, setEditing] = useState(false);
@@ -90,7 +92,7 @@ export default function ProjectTitle({
         />
         <button
           className={iconBtn + " text-ok"}
-          title="Сохранить"
+          title={t("Сохранить")}
           onMouseDown={(e) => e.preventDefault()}
           onClick={save}
         >
@@ -126,8 +128,8 @@ export default function ProjectTitle({
       {onRename && (
       <button
         className={iconBtn}
-        title="Переименовать проект"
-        aria-label="Переименовать проект"
+        title={t("Переименовать проект")}
+        aria-label={t("Переименовать проект")}
         onClick={startEdit}
       >
         <svg
@@ -148,8 +150,8 @@ export default function ProjectTitle({
       )}
       <button
         className={`${iconBtn} ${open ? "bg-white text-ink" : ""}`}
-        title="Другие проекты"
-        aria-label="Другие проекты"
+        title={t("Другие проекты")}
+        aria-label={t("Другие проекты")}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
       >
@@ -174,11 +176,11 @@ export default function ProjectTitle({
       {open && (
         <div className="absolute top-[calc(100%+6px)] left-0 z-40 w-[300px] overflow-hidden rounded-xl border border-line bg-white shadow-[0_18px_50px_rgba(20,20,10,.16)] animate-[menuIn_.12s_ease-out]">
           <div className="px-3 pt-2.5 pb-1.5 text-[11px] font-extrabold tracking-[.08em] text-muted uppercase">
-            Проекты
+            {t("Проекты")}
           </div>
           <div className="max-h-[320px] overflow-auto px-1.5 pb-1.5">
             {projects === null ? (
-              <div className="px-2.5 py-2 text-sm text-muted">Загрузка…</div>
+              <div className="px-2.5 py-2 text-sm text-muted">{t("Загрузка…")}</div>
             ) : (
               projects.map((p) => {
                 const current = p.id === projectId;
@@ -207,7 +209,7 @@ export default function ProjectTitle({
             onClick={() => setOpen(false)}
             className="block border-t border-line px-3 py-2.5 text-sm font-bold text-muted hover:bg-[#f3f2ed] hover:text-ink"
           >
-            Все проекты →
+            {t("Все проекты →")}
           </Link>
         </div>
       )}

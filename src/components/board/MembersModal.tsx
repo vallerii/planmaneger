@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ROLE_LABEL, type Invite, type Member, type Profile } from "@/lib/types";
@@ -66,6 +67,7 @@ export default function MembersModal({
   setMembers,
   toast,
 }: Props) {
+  const { t, rich } = useI18n();
   const supabase = useMemo(() => createClient(), []);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [email, setEmail] = useState("");
@@ -141,7 +143,7 @@ export default function MembersModal({
 
   async function copyFor(addr: string) {
     if (await copy(inviteLink(addr, projectId, projectName)))
-      toast("Ссылка скопирована");
+      toast(t("Ссылка скопирована"));
   }
 
   async function changeRole(uid: string, next: "editor" | "viewer") {
@@ -151,7 +153,7 @@ export default function MembersModal({
       p_role: next,
     });
     if (error) return setError(error.message);
-    toast(next === "viewer" ? "Теперь только просмотр" : "Теперь редактор");
+    toast(next === "viewer" ? t("Теперь только просмотр") : t("Теперь редактор"));
     reload();
   }
 
@@ -181,7 +183,7 @@ export default function MembersModal({
   const removing = members.find((m) => m.user_id === removeId);
 
   return (
-    <Modal open={open} onClose={onClose} title="Участники проекта" width={560}>
+    <Modal open={open} onClose={onClose} title={t("Участники проекта")} width={560}>
       <div className="max-h-[45vh] overflow-auto">
         {members.map((m) => {
           const name = m.profile?.full_name || m.profile?.email || "—";
@@ -197,7 +199,7 @@ export default function MembersModal({
                 <div className="truncate font-bold">
                   {name}{" "}
                   {m.user_id === me.id && (
-                    <span className="font-normal text-muted">(вы)</span>
+                    <span className="font-normal text-muted">{t("(вы)")}</span>
                   )}
                 </div>
                 <div className="truncate text-xs text-muted">
@@ -210,11 +212,11 @@ export default function MembersModal({
                   onChange={(e) =>
                     changeRole(m.user_id, e.target.value as "editor" | "viewer")
                   }
-                  title="Роль в проекте"
+                  title={t("Роль в проекте")}
                   className="rounded-full border-0 bg-[#efeee8] px-2 py-0.5 text-[11px] font-extrabold text-[#5d5b54] outline-none"
                 >
-                  <option value="editor">{ROLE_LABEL.editor}</option>
-                  <option value="viewer">{ROLE_LABEL.viewer}</option>
+                  <option value="editor">{t(ROLE_LABEL.editor)}</option>
+                  <option value="viewer">{t(ROLE_LABEL.viewer)}</option>
                 </select>
               ) : (
                 <span
@@ -224,14 +226,14 @@ export default function MembersModal({
                       : "bg-[#efeee8] text-[#5d5b54]"
                   }`}
                 >
-                  {ROLE_LABEL[m.role] ?? m.role}
+                  {ROLE_LABEL[m.role] ? t(ROLE_LABEL[m.role]) : m.role}
                 </span>
               )}
               {isOwner && m.role !== "owner" && (
                 <button
                   onClick={() => setRemoveId(m.user_id)}
                   className={smallBtn + " hover:text-bad"}
-                  title="Убрать из проекта"
+                  title={t("Убрать из проекта")}
                 >
                   ×
                 </button>
@@ -250,8 +252,8 @@ export default function MembersModal({
             <div className="min-w-0 flex-1">
               <div className="truncate font-bold">{i.email}</div>
               <div className="text-xs text-muted">
-                ждёт регистрации ·{" "}
-                {i.role === "viewer" ? ROLE_LABEL.viewer : ROLE_LABEL.editor}
+                {t("ждёт регистрации")} ·{" "}
+                {t(i.role === "viewer" ? ROLE_LABEL.viewer : ROLE_LABEL.editor)}
               </div>
             </div>
             {isOwner && (
@@ -259,14 +261,14 @@ export default function MembersModal({
                 <button
                   onClick={() => copyFor(i.email)}
                   className={smallBtn}
-                  title="Скопировать ссылку-приглашение"
+                  title={t("Скопировать ссылку-приглашение")}
                 >
                   <CopyIcon />
                 </button>
                 <button
                   onClick={() => cancelInvite(i.id)}
                   className={smallBtn + " hover:text-bad"}
-                  title="Отменить приглашение"
+                  title={t("Отменить приглашение")}
                 >
                   ×
                 </button>
@@ -293,9 +295,9 @@ export default function MembersModal({
                   role === v ? "bg-white shadow-sm" : "text-muted hover:text-ink"
                 }`}
               >
-                {label}
+                {t(label)}
                 <span className="block text-[11px] font-normal text-muted">
-                  {hint}
+                  {t(hint)}
                 </span>
               </button>
             ))}
@@ -304,7 +306,7 @@ export default function MembersModal({
             <input
               type="email"
               className={inputCls}
-              placeholder={role === "viewer" ? "email клиента или партнёра" : "email коллеги"}
+              placeholder={role === "viewer" ? t("email клиента или партнёра") : t("email коллеги")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}
@@ -314,7 +316,7 @@ export default function MembersModal({
               onClick={invite}
               disabled={busy || !email.trim()}
             >
-              Пригласить
+              {t("Пригласить")}
             </Btn>
           </div>
 
@@ -323,14 +325,17 @@ export default function MembersModal({
               <div className="text-sm text-[#0b5a40]">
                 {last.added ? (
                   <>
-                    <b>{last.email}</b> уже есть в системе и добавлен в проект.
-                    Отправьте ссылку, чтобы открыть проект:
+                    {rich(
+                      "{email} уже есть в системе и добавлен в проект. Отправьте ссылку, чтобы открыть проект:",
+                      { email: <b>{last.email}</b> },
+                    )}
                   </>
                 ) : (
                   <>
-                    Отправьте <b>{last.email}</b> эту ссылку (в Telegram,
-                    WhatsApp, почтой). По ней откроется регистрация с уже
-                    заполненным email, а после входа — этот проект.
+                    {rich(
+                      "Отправьте {email} эту ссылку (в Telegram, WhatsApp, почтой). По ней откроется регистрация с уже заполненным email, а после входа — этот проект.",
+                      { email: <b>{last.email}</b> },
+                    )}
                   </>
                 )}
               </div>
@@ -346,10 +351,10 @@ export default function MembersModal({
                   className={copied ? "border-ok text-ok" : ""}
                 >
                   {copied ? (
-                    "✓ Скопировано"
+                    t("✓ Скопировано")
                   ) : (
                     <>
-                      <CopyIcon /> Скопировать
+                      <CopyIcon />{" "}{t("Скопировать")}
                     </>
                   )}
                 </Btn>
@@ -357,31 +362,34 @@ export default function MembersModal({
             </div>
           ) : (
             <p className="mt-2 text-[11px] text-muted">
-              После приглашения появится ссылка — отправьте её человеку.
-              Скопировать её снова можно иконкой рядом с приглашением.
+              {t("После приглашения появится ссылка — отправьте её человеку. Скопировать её снова можно иконкой рядом с приглашением.")}
             </p>
           )}
         </>
       ) : (
         <p className="mt-4 text-[11px] text-muted">
-          Приглашать участников может только владелец проекта.
+          {t("Приглашать участников может только владелец проекта.")}
         </p>
       )}
       {error && <p className="mt-2 text-sm text-bad">{error}</p>}
       <div className="mt-5 flex justify-end">
-        <Btn onClick={onClose}>Готово</Btn>
+        <Btn onClick={onClose}>{t("Готово")}</Btn>
       </div>
 
       <ConfirmDialog
         open={!!removeId}
-        title="Убрать участника?"
-        confirmText="Убрать"
+        title={t("Убрать участника?")}
+        confirmText={t("Убрать")}
         onClose={() => setRemoveId(null)}
         onConfirm={() => removeId && removeMember(removeId)}
       >
-        <b>{removing?.profile?.full_name || removing?.profile?.email}</b>{" "}
-        потеряет доступ к проекту «{projectName}». Задачи и комментарии
-        останутся.
+        {rich(
+          "{name} потеряет доступ к проекту «{project}». Задачи и комментарии останутся.",
+          {
+            name: <b>{removing?.profile?.full_name || removing?.profile?.email}</b>,
+            project: projectName,
+          },
+        )}
       </ConfirmDialog>
     </Modal>
   );

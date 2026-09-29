@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -8,6 +9,7 @@ import { CYCLE_TEMPLATE, stepDescription } from "@/lib/steps";
 import { todayISO } from "@/lib/schedule";
 
 export default function CreateProject() {
+  const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -32,7 +34,7 @@ export default function CreateProject() {
       .single();
     if (error || !project) {
       setBusy(false);
-      return setError(error?.message ?? "Ошибка");
+      return setError(error?.message ?? t("Ошибка"));
     }
 
     // Шаблон продуктового цикла: 8 фаз, задачи связаны с профилем
@@ -48,7 +50,7 @@ export default function CreateProject() {
       .select("id,position");
     if (phErr || !phaseRows) {
       setBusy(false);
-      return setError(phErr?.message ?? "Ошибка");
+      return setError(phErr?.message ?? t("Ошибка"));
     }
     const phaseId = (i: number) => phaseRows.find((p) => p.position === i)!.id;
     const rows = CYCLE_TEMPLATE.flatMap((ph, i) =>
@@ -67,7 +69,7 @@ export default function CreateProject() {
     if (tErr && /profile_step/.test(tErr.message)) {
       setBusy(false);
       return setError(
-        "Запустите supabase/migrations/0008_cycle_template.sql в Supabase → SQL Editor: без неё задачи не свяжутся с профилем. Проект создан без задач — удалите его и создайте заново.",
+        t("Запустите supabase/migrations/0008_cycle_template.sql в Supabase → SQL Editor: без неё задачи не свяжутся с профилем. Проект создан без задач — удалите его и создайте заново."),
       );
     }
     if (tErr) {
@@ -80,21 +82,21 @@ export default function CreateProject() {
   return (
     <>
       <Btn variant="primary" onClick={() => setOpen(true)}>
-        ＋ Новый проект
+        {t("＋ Новый проект")}
       </Btn>
-      <Modal open={open} onClose={() => setOpen(false)} title="Новый проект">
-        <Field label="Название">
+      <Modal open={open} onClose={() => setOpen(false)} title={t("Новый проект")}>
+        <Field label={t("Название")}>
           <input
             autoFocus
             className={inputCls}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Например: Product Roadmap · 2026"
+            placeholder={t("Например: Product Roadmap · 2026")}
             onKeyDown={(e) => e.key === "Enter" && create()}
           />
         </Field>
 
-        <Field label="Дата старта (первый рабочий день)">
+        <Field label={t("Дата старта (первый рабочий день)")}>
           <input
             type="date"
             className={inputCls}
@@ -104,21 +106,18 @@ export default function CreateProject() {
         </Field>
 
         <p className="mb-1 text-sm text-muted">
-          Проект начнётся с полного продуктового цикла:{" "}
-          {CYCLE_TEMPLATE.map((p) => p.name).join(" → ")}. Задачи, связанные с
-          профилем продукта, заполняются сами по мере заполнения профиля. Лишнее
-          можно удалить на доске.
+          {t("Проект начнётся с полного продуктового цикла: {phases}. Задачи, связанные с профилем продукта, заполняются сами по мере заполнения профиля. Лишнее можно удалить на доске.", { phases: CYCLE_TEMPLATE.map((p) => p.name).join(" → ") })}
         </p>
 
         {error && <p className="text-sm text-bad">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
-          <Btn onClick={() => setOpen(false)}>Отмена</Btn>
+          <Btn onClick={() => setOpen(false)}>{t("Отмена")}</Btn>
           <Btn
             variant="primary"
             onClick={create}
             disabled={busy || !name.trim()}
           >
-            {busy ? "Создаю…" : "Создать"}
+            {busy ? t("Создаю…") : t("Создать")}
           </Btn>
         </div>
       </Modal>

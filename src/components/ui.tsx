@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import {
   useCallback,
   useEffect,
@@ -336,6 +337,7 @@ export function Stepper({
   min?: number;
   max?: number;
 }) {
+  const t = useT();
   const clamp = (n: number) =>
     Math.max(min, Math.min(max, Math.round(n) || min));
   const b =
@@ -347,7 +349,7 @@ export function Stepper({
         className={b}
         disabled={value <= min}
         onClick={() => onChange(clamp(value - 1))}
-        aria-label="Меньше"
+        aria-label={t("Меньше")}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
           <path
@@ -372,7 +374,7 @@ export function Stepper({
         className={b}
         disabled={value >= max}
         onClick={() => onChange(clamp(value + 1))}
-        aria-label="Больше"
+        aria-label={t("Больше")}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden>
           <path
@@ -421,7 +423,7 @@ export function ConfirmDialog({
   open,
   title,
   children,
-  confirmText = "Удалить",
+  confirmText,
   onConfirm,
   onClose,
 }: {
@@ -432,13 +434,14 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   return (
     <Modal open={open} onClose={onClose} title={title} width={460}>
       <div className="text-[15px] leading-relaxed text-[#45443e]">
         {children}
       </div>
       <div className="mt-6 flex justify-end gap-2">
-        <Btn onClick={onClose}>Отмена</Btn>
+        <Btn onClick={onClose}>{t("Отмена")}</Btn>
         <Btn
           variant="destructive"
           onClick={() => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,6 +22,7 @@ export type ProjectCardData = {
 };
 
 export default function ProjectCard({ p }: { p: ProjectCardData }) {
+  const { t, rich, locale } = useI18n();
   const router = useRouter();
   const [confirm, setConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -56,44 +58,44 @@ export default function ProjectCard({ p }: { p: ProjectCardData }) {
             {!!p.unread && (
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full bg-bad"
-                title={`Новых комментариев: ${p.unread}`}
-                aria-label={`Новых комментариев: ${p.unread}`}
+                title={t("Новых комментариев: {n}", { n: p.unread })}
+                aria-label={t("Новых комментариев: {n}", { n: p.unread })}
               />
             )}
           </h2>
           {!p.isOwner &&
             (p.viewer ? (
               <span className="rounded-full bg-[#e6effc] px-2 py-0.5 text-[10px] font-extrabold text-[#1d4f9a]">
-                просмотр
+                {t("просмотр")}
               </span>
             ) : (
               <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">
-                гость
+                {t("гость")}
               </span>
             ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
           <span>
-            <b className="text-ink">{p.phases}</b> фаз
+            <b className="text-ink">{p.phases}</b>{" "}{t("фаз")}
           </span>
           <span>
-            <b className="text-ink">{p.tasks}</b> задач
+            <b className="text-ink">{p.tasks}</b>{" "}{t("задач")}
           </span>
           <span>
-            <b className="text-ink">{p.members}</b> участн.
+            <b className="text-ink">{p.members}</b>{" "}{t("участн.")}
           </span>
-          <span>старт {new Date(p.startDate).toLocaleDateString("ru-RU")}</span>
+          <span>{t("старт")} {new Date(p.startDate).toLocaleDateString(locale)}</span>
         </div>
         {error && (
-          <p className="mt-2 text-xs text-bad">Не удалось удалить: {error}</p>
+          <p className="mt-2 text-xs text-bad">{t("Не удалось удалить:")} {error}</p>
         )}
       </Link>
 
       {p.isOwner && (
         <button
           className={`${trashBtnCls} absolute top-4 right-4`}
-          title="Удалить проект"
-          aria-label="Удалить проект"
+          title={t("Удалить проект")}
+          aria-label={t("Удалить проект")}
           onClick={() => setConfirm(true)}
         >
           <TrashIcon />
@@ -102,14 +104,15 @@ export default function ProjectCard({ p }: { p: ProjectCardData }) {
 
       <ConfirmDialog
         open={confirm}
-        title="Удалить проект?"
-        confirmText="Удалить проект"
+        title={t("Удалить проект?")}
+        confirmText={t("Удалить проект")}
         onClose={() => setConfirm(false)}
         onConfirm={remove}
       >
-        Проект «<b>{p.name}</b>» будет удалён вместе со всеми фазами ({p.phases}
-        ), задачами ({p.tasks}) и комментариями. Участники потеряют к нему
-        доступ. Это действие нельзя отменить.
+        {rich(
+          "Проект «{name}» будет удалён вместе со всеми фазами ({phases}), задачами ({tasks}) и комментариями. Участники потеряют к нему доступ. Это действие нельзя отменить.",
+          { name: <b>{p.name}</b>, phases: p.phases, tasks: p.tasks },
+        )}
       </ConfirmDialog>
     </div>
   );

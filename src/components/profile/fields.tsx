@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/i18n/client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Select, TrashIcon, trashBtnCls } from "../ui";
 import { TONE, freshnessLabel, type Freshness, type Tone } from "@/lib/profile";
@@ -90,10 +91,11 @@ export function Label({
   children: ReactNode;
   hint?: string;
 }) {
+  const t = useT();
   return (
     <div className="mb-1.5 flex items-baseline gap-2">
       <span className="text-[11px] font-bold text-muted">{children}</span>
-      {hint && <span className="text-[11px] text-[#aaa]">{hint}</span>}
+      {hint && <span className="text-[11px] text-[#aaa]">{t(hint)}</span>}
     </div>
   );
 }
@@ -109,6 +111,7 @@ export function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
 }
 
 export function FreshBadge({ f }: { f: Freshness }) {
+  const t = useT();
   const tone: Tone =
     f.kind === "fresh"
       ? "green"
@@ -117,7 +120,7 @@ export function FreshBadge({ f }: { f: Freshness }) {
         : f.kind === "stale"
           ? "red"
           : "gray";
-  return <Badge tone={tone}>{freshnessLabel(f)}</Badge>;
+  return <Badge tone={tone}>{freshnessLabel(f, t)}</Badge>;
 }
 
 /** Выпадающий список статуса с цветной точкой. */
@@ -132,6 +135,7 @@ export function StatusPick({
   onChange: (v: string) => void;
   size?: "sm" | "md";
 }) {
+  const t = useT();
   return (
     <Select
       value={value}
@@ -150,7 +154,7 @@ export function StatusPick({
             <span
               className={`h-2 w-2 shrink-0 rounded-full ${TONE[o.tone].dot}`}
             />
-            {o.label}
+            {t(o.label)}
           </span>
         ),
       }))}
@@ -170,6 +174,7 @@ export function Pick({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useT();
   return (
     <Select
       value={value ?? ""}
@@ -177,8 +182,8 @@ export function Pick({
       menuWidth={220}
       className="!h-[36px] !rounded-lg !border-0 !bg-[#f5f4ef] text-sm"
       options={[
-        { value: "", label: <span className="text-muted">{placeholder}</span> },
-        ...options.map((o) => ({ value: o.value, label: o.label })),
+        { value: "", label: <span className="text-muted">{t(placeholder)}</span> },
+        ...options.map((o) => ({ value: o.value, label: t(o.label) })),
       ]}
     />
   );
@@ -201,6 +206,7 @@ export function Section({
   action?: ReactNode;
   children: ReactNode;
 }) {
+  const t = useT();
   return (
     <section
       id={`sec-${id}`}
@@ -208,8 +214,8 @@ export function Section({
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#efede6] px-5 py-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-extrabold tracking-tight">{title}</h2>
-          {desc && <p className="mt-0.5 text-sm text-muted">{desc}</p>}
+          <h2 className="text-lg font-extrabold tracking-tight">{t(title)}</h2>
+          {desc && <p className="mt-0.5 text-sm text-muted">{t(desc)}</p>}
         </div>
         <div className="flex items-center gap-2">
           {fresh && <FreshBadge f={fresh} />}
@@ -219,9 +225,9 @@ export function Section({
               <button
                 onClick={onReviewed}
                 className="edit-only rounded-[8px] border border-line px-2 py-1 text-xs font-bold text-muted hover:bg-[#f5f4ef] hover:text-ink"
-                title="Проверили — данные актуальны, изменений нет"
+                title={t("Проверили — данные актуальны, изменений нет")}
               >
-                ✓ Актуально
+                {t("✓ Актуально")}
               </button>
             )}
           {action}
@@ -234,17 +240,19 @@ export function Section({
 
 export function RemoveBtn({
   onClick,
-  title = "Удалить",
+  title,
 }: {
   onClick: () => void;
   title?: string;
 }) {
+  const t = useT();
+  const label = title ?? t("Удалить");
   return (
     <button
       onClick={onClick}
       className={`edit-only ${trashBtnCls}`}
-      title={title}
-      aria-label={title}
+      title={label}
+      aria-label={label}
     >
       <TrashIcon />
     </button>
@@ -376,6 +384,7 @@ export function Segmented<T extends string | number>({
   options: { value: T; label: string }[];
   onChange: (v: T) => void;
 }) {
+  const t = useT();
   return (
     <div className="inline-flex rounded-[10px] bg-[#eceae3] p-0.5">
       {options.map((o) => (
@@ -388,7 +397,7 @@ export function Segmented<T extends string | number>({
               : "text-muted hover:text-ink"
           }`}
         >
-          {o.label}
+          {t(o.label)}
         </button>
       ))}
     </div>

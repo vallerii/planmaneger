@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n, useT } from "@/i18n/client";
 import { useState } from "react";
 import {
   IMPACTS,
@@ -52,6 +53,7 @@ const REVISE: Record<string, { steps: ProfileStep[]; text: string }> = {
 };
 
 export function Risks({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const risks = ctx.byKind("risk");
 
@@ -59,15 +61,14 @@ export function Risks({ ctx }: { ctx: ProfileCtx }) {
     <div className="flex flex-col gap-5">
       <Section
         id="risk"
-        title="Риски и ключевые допущения"
-        desc="Что может помешать продукту и во что мы верим без доказательств. Самые опасные допущения — первые кандидаты на эксперименты."
+        title={t("Риски и ключевые допущения")}
+        desc={t("Что может помешать продукту и во что мы верим без доказательств. Самые опасные допущения — первые кандидаты на эксперименты.")}
         fresh={freshness("risk", profile, items)}
         onReviewed={() => ctx.markReviewed("risk")}
       >
         {risks.length === 0 ? (
           <Empty>
-            Пока пусто. Запишите, что может помешать: юридические ограничения,
-            доступ к данным, конкуренты…
+            {t("Пока пусто. Запишите, что может помешать: юридические ограничения, доступ к данным, конкуренты…")}
           </Empty>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
@@ -81,7 +82,7 @@ export function Risks({ ctx }: { ctx: ProfileCtx }) {
             ctx.addItem("risk", { type: "risk", impact: "medium" })
           }
         >
-          + Добавить риск или вопрос
+          {t("+ Добавить риск или вопрос")}
         </AddBtn>
       </Section>
     </div>
@@ -89,26 +90,26 @@ export function Risks({ ctx }: { ctx: ProfileCtx }) {
 }
 
 export function Decisions({ ctx }: { ctx: ProfileCtx }) {
+  const t = useT();
   const { profile, items } = ctx;
   const decisions = ctx.byKind("decision");
   const hypOptions = ctx.byKind("hypothesis").map((h) => ({
     value: h.id,
-    label: h.title || "Гипотеза без формулировки",
+    label: h.title || t("Гипотеза без формулировки"),
   }));
 
   return (
     <div className="flex flex-col gap-5">
       <Section
         id="decision"
-        title="Принятые решения"
-        desc="Журнал решений по циклу: итог (Proceed / Adjust / Pivot / Stop), почему и что заставит пересмотреть. Чтобы через месяц не спорить заново."
+        title={t("Принятые решения")}
+        desc={t("Журнал решений по циклу: итог (Proceed / Adjust / Pivot / Stop), почему и что заставит пересмотреть. Чтобы через месяц не спорить заново.")}
         fresh={freshness("decision", profile, items)}
         onReviewed={() => ctx.markReviewed("decision")}
       >
         {decisions.length === 0 ? (
           <Empty>
-            Решений пока нет. Например: «Начинаем с салонов красоты, а не с
-            ресторанов».
+            {t("Решений пока нет. Например: «Начинаем с салонов красоты, а не с ресторанов».")}
           </Empty>
         ) : (
           <div className="flex flex-col gap-3">
@@ -123,7 +124,7 @@ export function Decisions({ ctx }: { ctx: ProfileCtx }) {
           </div>
         )}
         <AddBtn onClick={() => ctx.addItem("decision", { date: todayISO() })}>
-          + Записать решение
+          {t("+ Записать решение")}
         </AddBtn>
       </Section>
 
@@ -133,6 +134,7 @@ export function Decisions({ ctx }: { ctx: ProfileCtx }) {
 }
 
 function RiskCard({ r, ctx }: { r: ProfileItem; ctx: ProfileCtx }) {
+  const t = useT();
   const closed = r.status === "closed";
   const set = (data: Record<string, unknown>) => ctx.updateItem(r.id, { data });
   return (
@@ -147,7 +149,7 @@ function RiskCard({ r, ctx }: { r: ProfileItem; ctx: ProfileCtx }) {
             value={r.data.type ?? ""}
             options={RISK_TYPES}
             onChange={(v) => set({ type: v || null })}
-            placeholder="Тип"
+            placeholder={t("Тип")}
           />
         </div>
         <div className="flex-1" />
@@ -165,15 +167,15 @@ function RiskCard({ r, ctx }: { r: ProfileItem; ctx: ProfileCtx }) {
           onSave={(v) => ctx.updateItem(r.id, { title: v })}
           placeholder={
             r.data.type === "question"
-              ? "Какой вопрос пока без ответа?"
-              : "Что может пойти не так?"
+              ? t("Какой вопрос пока без ответа?")
+              : t("Что может пойти не так?")
           }
           className="font-bold"
           rows={1}
         />
       </div>
       <div className="mt-3">
-        <Label>Влияние</Label>
+        <Label>{t("Влияние")}</Label>
         <Pick
           value={r.data.impact ?? ""}
           options={IMPACTS}
@@ -181,11 +183,11 @@ function RiskCard({ r, ctx }: { r: ProfileItem; ctx: ProfileCtx }) {
         />
       </div>
       <div className="mt-3">
-        <Label>Как проверить / снизить</Label>
+        <Label>{t("Как проверить / снизить")}</Label>
         <AutoText
           value={r.data.mitigation ?? ""}
           onSave={(v) => set({ mitigation: v })}
-          placeholder="Что сделаем, чтобы получить ответ или уменьшить риск"
+          placeholder={t("Что сделаем, чтобы получить ответ или уменьшить риск")}
         />
       </div>
     </div>
@@ -201,6 +203,7 @@ function DecisionCard({
   ctx: ProfileCtx;
   hypOptions: { value: string; label: string }[];
 }) {
+  const t = useT();
   const set = (data: Record<string, unknown>) => ctx.updateItem(d.id, { data });
   const verdict = VERDICTS.find((v) => v.value === d.data.verdict);
   const revise =
@@ -229,7 +232,7 @@ function DecisionCard({
           <AutoText
             value={d.title}
             onSave={(v) => ctx.updateItem(d.id, { title: v })}
-            placeholder="Что решили"
+            placeholder={t("Что решили")}
             className="font-bold"
             rows={1}
           />
@@ -247,29 +250,29 @@ function DecisionCard({
             value={d.data.verdict ?? ""}
             options={VERDICTS.map((v) => ({ value: v.value, label: v.label }))}
             onChange={(v) => set({ verdict: v || null })}
-            placeholder="Итог решения"
+            placeholder={t("Итог решения")}
           />
         </div>
         {verdict && (
           <span
             className={`rounded-full px-2.5 py-1 text-xs font-bold ${TONE[verdict.tone].badge}`}
           >
-            {verdict.hint}
+            {t(verdict.hint)}
           </span>
         )}
       </div>
       {revise && reviseTasks.length > 0 && (
         <div className="mt-3 rounded-[10px] border border-[#d9cdf5] bg-[#f6f2fe] px-3 py-2.5 text-sm text-[#45307e]">
-          <div>{revise.text}</div>
+          <div>{t(revise.text)}</div>
           <div className="mt-1 text-xs">
-            Закрытые задачи:{" "}
-            {reviseTasks.map((t) => `«${t.name}»`).join(", ")}
+            {t("Закрытые задачи:")}{" "}
+            {reviseTasks.map((x) => `«${t(x.name)}»`).join(", ")}
           </div>
           <button
             onClick={() => ctx.reviseSteps(revise.steps)}
             className="mt-2 rounded-lg bg-[#5b3aa6] px-3 py-1.5 text-xs font-bold text-white hover:brightness-110"
           >
-            ↻ Отправить на пересмотр ({reviseTasks.length})
+            ↻ {t("Отправить на пересмотр")} ({reviseTasks.length})
           </button>
         </div>
       )}
@@ -277,23 +280,23 @@ function DecisionCard({
         className={`mt-3 grid gap-3 ${ctx.canCycle ? "md:grid-cols-4" : "md:grid-cols-3"}`}
       >
         <div>
-          <Label>Почему</Label>
+          <Label>{t("Почему")}</Label>
           <AutoText
             value={d.data.why ?? ""}
             onSave={(v) => set({ why: v })}
-            placeholder="Какие данные или аргументы"
+            placeholder={t("Какие данные или аргументы")}
           />
         </div>
         <div>
-          <Label>Что заставит пересмотреть</Label>
+          <Label>{t("Что заставит пересмотреть")}</Label>
           <AutoText
             value={d.data.revisit ?? ""}
             onSave={(v) => set({ revisit: v })}
-            placeholder="Например: меньше 3 оплат за месяц"
+            placeholder={t("Например: меньше 3 оплат за месяц")}
           />
         </div>
         <div>
-          <Label>На основе гипотезы</Label>
+          <Label>{t("На основе гипотезы")}</Label>
           <Pick
             value={d.data.hypothesis_id ?? ""}
             options={hypOptions}
@@ -313,6 +316,7 @@ function DecisionCard({
 }
 
 function History({ ctx }: { ctx: ProfileCtx }) {
+  const { t, lang, locale } = useI18n();
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -330,8 +334,8 @@ function History({ ctx }: { ctx: ProfileCtx }) {
   return (
     <Section
       id="history"
-      title="История"
-      desc="Что добавляли, какие статусы меняли, и заметки команды. Пишется автоматически."
+      title={t("История")}
+      desc={t("Что добавляли, какие статусы меняли, и заметки команды. Пишется автоматически.")}
     >
       <div className="flex flex-col gap-2 sm:flex-row">
         <textarea
@@ -341,7 +345,7 @@ function History({ ctx }: { ctx: ProfileCtx }) {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit();
           }}
           rows={2}
-          placeholder="Заметка: что узнали на созвоне, почему поменяли приоритет…"
+          placeholder={t("Заметка: что узнали на созвоне, почему поменяли приоритет…")}
           className="min-w-0 flex-1 resize-none rounded-[10px] border border-line bg-[#fafafa] px-3 py-2 text-sm outline-none focus:border-ink/30 focus:bg-white"
         />
         <button
@@ -349,12 +353,12 @@ function History({ ctx }: { ctx: ProfileCtx }) {
           disabled={!note.trim() || saving}
           className="shrink-0 self-start rounded-[10px] bg-ink px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
         >
-          {saving ? "Сохраняю…" : "Добавить в историю"}
+          {saving ? t("Сохраняю…") : t("Добавить в историю")}
         </button>
       </div>
 
       {ctx.history.length === 0 ? (
-        <p className="mt-4 text-center text-sm text-muted">Событий пока нет.</p>
+        <p className="mt-4 text-center text-sm text-muted">{t("Событий пока нет.")}</p>
       ) : (
         <ul className="mt-4 flex flex-col">
           {list.map((e) => (
@@ -369,11 +373,11 @@ function History({ ctx }: { ctx: ProfileCtx }) {
                 <div
                   className={`text-sm ${e.event === "note" ? "whitespace-pre-wrap" : ""}`}
                 >
-                  {describe(e)}
+                  {describe(e, t, lang)}
                 </div>
                 <div className="mt-0.5 text-xs text-muted">
                   {e.actor?.full_name || e.actor?.email || "—"} ·{" "}
-                  {fmtDate(e.created_at)}
+                  {fmtDate(e.created_at, locale)}
                 </div>
               </div>
             </li>
@@ -385,24 +389,30 @@ function History({ ctx }: { ctx: ProfileCtx }) {
           onClick={() => setShowAll(true)}
           className="mt-2 text-sm font-bold text-muted hover:text-ink"
         >
-          Показать все ({ctx.history.length})
+          {t("Показать все")} ({ctx.history.length})
         </button>
       )}
     </Section>
   );
 }
 
-function describe(e: HistoryEntry) {
-  const kind = e.kind ? KIND_LABEL[e.kind] : "";
-  const title = e.title?.trim() ? `«${e.title}»` : "без названия";
+function describe(
+  e: HistoryEntry,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+  lang: string,
+) {
+  const kind = e.kind ? t(KIND_LABEL[e.kind]) : "";
+  // в немецком существительные с заглавной
+  const lower = lang === "de" ? kind : kind.toLowerCase();
+  const title = e.title?.trim() ? `«${t(e.title)}»` : t("без названия");
   if (e.event === "note") return e.note;
-  if (e.event === "added") return `Добавлено: ${kind.toLowerCase()} ${title}`;
-  if (e.event === "removed") return `Удалено: ${kind.toLowerCase()} ${title}`;
+  if (e.event === "added") return `${t("Добавлено:")} ${lower} ${title}`;
+  if (e.event === "removed") return `${t("Удалено:")} ${lower} ${title}`;
   if (e.event === "status" && e.kind)
     return (
       <>
-        {kind} {title}: {statusOf(e.kind, e.from_status ?? "").label} →{" "}
-        <b>{statusOf(e.kind, e.to_status ?? "").label}</b>
+        {kind} {title}: {t(statusOf(e.kind, e.from_status ?? "").label)} →{" "}
+        <b>{t(statusOf(e.kind, e.to_status ?? "").label)}</b>
       </>
     );
   return title;
@@ -415,8 +425,8 @@ function dot(e: HistoryEntry) {
   return "bg-[#3b7be0]";
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleString("ru-RU", {
+function fmtDate(iso: string, locale: string) {
+  return new Date(iso).toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",

@@ -355,12 +355,17 @@ export function freshness(
   return { kind: "stale", days: d };
 }
 
-export function freshnessLabel(f: Freshness) {
-  if (f.kind === "empty") return "не заполнено";
-  if (!Number.isFinite(f.days)) return "давно не обновлялось";
-  if (f.days === 0) return "обновлено сегодня";
-  if (f.days === 1) return "вчера";
-  return `${f.days} дн. назад`;
+/** Перевод подписей интерфейса (useI18n().t); по умолчанию — русский как есть. */
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+const ruT: TFn = (key, vars) =>
+  vars ? key.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : key;
+
+export function freshnessLabel(f: Freshness, t: TFn = ruT) {
+  if (f.kind === "empty") return t("не заполнено");
+  if (!Number.isFinite(f.days)) return t("давно не обновлялось");
+  if (f.days === 0) return t("обновлено сегодня");
+  if (f.days === 1) return t("вчера");
+  return t("{n} дн. назад", { n: f.days });
 }
 
 export function positioningFilled(p: Positioning) {
@@ -431,10 +436,10 @@ export function firstSentence(t?: string) {
   return s.replace(/^мы\s+/i, "").replace(/[.!?]+$/, "");
 }
 
-const joinRu = (xs: string[]) =>
+const joinList = (xs: string[], and: string) =>
   xs.length <= 1
     ? (xs[0] ?? "")
-    : `${xs.slice(0, -1).join(", ")} и ${xs[xs.length - 1]}`;
+    : `${xs.slice(0, -1).join(", ")} ${and} ${xs[xs.length - 1]}`;
 
 /**
  * Фраза позиционирования для каждого ICP (кроме «Не подходит»).
@@ -444,7 +449,9 @@ export function buildPositioning(
   profile: ProductProfile,
   items: ProfileItem[],
   productName: string,
+  tr: TFn = ruT,
 ): PosStatement[] {
+  const joinRu = (xs: string[]) => joinList(xs, tr("и"));
   const icps = items
     .filter((i) => i.kind === "icp" && i.status !== "rejected")
     .sort((a, b) => a.position - b.position);
@@ -481,31 +488,31 @@ export function buildPositioning(
       {
         key: "problem",
         text: problems.length ? joinRu(problems) : null,
-        placeholder: "проблема",
+        placeholder: tr("проблема"),
         target: { tab: "foundation", sec: "problem" },
       },
       {
         key: "category",
         text: clean(t.category),
-        placeholder: "категория",
+        placeholder: tr("категория"),
         target: { tab: "foundation", sec: "thesis:category" },
       },
       {
         key: "value",
         text: clean(t.value),
-        placeholder: "ключевая ценность",
+        placeholder: tr("ключевая ценность"),
         target: { tab: "foundation", sec: "thesis:value" },
       },
       {
         key: "alternatives",
         text: alternatives.length ? joinRu(alternatives) : null,
-        placeholder: "альтернативы",
+        placeholder: tr("альтернативы"),
         target: { tab: "market", sec: "competitor" },
       },
       {
         key: "difference",
         text: clean(firstSentence(t.advantage)),
-        placeholder: "главное отличие",
+        placeholder: tr("главное отличие"),
         target: { tab: "foundation", sec: "thesis:advantage" },
       },
     ];
@@ -517,7 +524,18 @@ export function buildPositioning(
       icp,
       parts,
       complete: parts.every((p) => p.text),
-      text: `Для ${v("icp")}, у которых ${v("problem")}, ${productName} — ${v("category")}: ${v("value")}. В отличие от ${v("alternatives")}, мы ${v("difference")}.`,
+      text: tr(
+        "Для {icp}, у которых {problem}, {product} — {category}: {value}. В отличие от {alternatives}, мы {difference}.",
+        {
+          icp: v("icp"),
+          problem: v("problem"),
+          product: productName,
+          category: v("category"),
+          value: v("value"),
+          alternatives: v("alternatives"),
+          difference: v("difference"),
+        },
+      ),
     };
   };
   return icps.length ? icps.map(forIcp) : [forIcp(null)];

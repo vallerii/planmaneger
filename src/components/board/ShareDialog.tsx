@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useState } from "react";
 import { Btn, Modal } from "../ui";
 
@@ -34,6 +35,7 @@ export default function ShareDialog({
   token: string | null;
   onChange: (token: string | null) => void;
 }) {
+  const { t, rich } = useI18n();
   const [copied, setCopied] = useState(false);
   const link =
     token && typeof window !== "undefined"
@@ -49,14 +51,14 @@ export default function ShareDialog({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Ссылка на задачу" width={520}>
+    <Modal open={open} onClose={onClose} title={t("Ссылка на задачу")} width={520}>
       {token ? (
         <>
           <p className="text-[15px] leading-relaxed text-[#45443e]">
-            Любой, у кого есть ссылка, может посмотреть задачу «
-            <b>{taskName}</b>» без входа: название, статус, сроки и описание.
-            Комментарии и остальной проект не видны. Редактировать по ссылке
-            нельзя.
+            {rich(
+              "Любой, у кого есть ссылка, может посмотреть задачу «{name}» без входа: название, статус, сроки и описание. Комментарии и остальной проект не видны. Редактировать по ссылке нельзя.",
+              { name: <b>{t(taskName)}</b> },
+            )}
           </p>
           <div className="mt-4 flex gap-2">
             <input
@@ -66,40 +68,40 @@ export default function ShareDialog({
               className="min-w-0 flex-1 rounded-[10px] border border-line bg-[#fafafa] px-2.5 py-2.5 text-sm outline-none"
             />
             <Btn variant="primary" onClick={copy}>
-              {copied ? "✓ Скопировано" : "Скопировать"}
+              {copied ? t("✓ Скопировано") : t("Скопировать")}
             </Btn>
           </div>
           <div className="mt-5 flex items-center justify-between gap-2">
             <button
               onClick={() => onChange(null)}
               className="text-sm font-bold text-bad hover:underline"
-              title="Старая ссылка перестанет открываться"
+              title={t("Старая ссылка перестанет открываться")}
             >
-              Отключить ссылку
+              {t("Отключить ссылку")}
             </button>
             <div className="flex gap-2">
               <a href={link} target="_blank" rel="noopener noreferrer">
-                <Btn>Открыть ↗</Btn>
+                <Btn>{t("Открыть ↗")}</Btn>
               </a>
-              <Btn onClick={onClose}>Готово</Btn>
+              <Btn onClick={onClose}>{t("Готово")}</Btn>
             </div>
           </div>
         </>
       ) : (
         <>
           <p className="text-[15px] leading-relaxed text-[#45443e]">
-            Создайте ссылку, чтобы отправить задачу «<b>{taskName}</b>»
-            исполнителю, у которого нет доступа к проекту. По ссылке откроется
-            отдельная страница только с этой задачей — без входа и без
-            возможности редактировать.
+            {rich(
+              "Создайте ссылку, чтобы отправить задачу «{name}» исполнителю, у которого нет доступа к проекту. По ссылке откроется отдельная страница только с этой задачей — без входа и без возможности редактировать.",
+              { name: <b>{t(taskName)}</b> },
+            )}
           </p>
           <div className="mt-6 flex justify-end gap-2">
-            <Btn onClick={onClose}>Отмена</Btn>
+            <Btn onClick={onClose}>{t("Отмена")}</Btn>
             <Btn
               variant="primary"
               onClick={() => onChange(crypto.randomUUID())}
             >
-              <LinkIcon size={14} /> Создать ссылку
+              <LinkIcon size={14} />{" "}{t("Создать ссылку")}
             </Btn>
           </div>
         </>

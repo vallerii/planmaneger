@@ -5,9 +5,11 @@ import UserMenu from "@/components/UserMenu";
 import CreateProject from "@/components/CreateProject";
 import ProjectCard from "@/components/ProjectCard";
 import RefreshOnFocus from "@/components/RefreshOnFocus";
+import { getI18n } from "@/i18n/server";
 
 export default async function Home() {
   const supabase = await createClient();
+  const { t } = await getI18n();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login?expired=1");
 
@@ -60,9 +62,9 @@ export default async function Home() {
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Проекты</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">{t("Проекты")}</h1>
             <p className="text-muted">
-              Ваши проекты и проекты, куда вас пригласили
+              {t("Ваши проекты и проекты, куда вас пригласили")}
             </p>
           </div>
           <CreateProject />
@@ -70,8 +72,7 @@ export default async function Home() {
 
         {!projects?.length ? (
           <div className="rounded-[17px] border border-dashed border-[#bdbbb2] p-12 text-center text-muted">
-            Пока нет проектов. Создайте первый — и добавьте в него фазы и
-            задачи.
+            {t("Пока нет проектов. Создайте первый — и добавьте в него фазы и задачи.")}
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useI18n } from "@/i18n/client";
 import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -8,7 +9,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Phase, SizeDays, Task } from "@/lib/types";
-import { dateRu, fmtDays, phaseStats } from "@/lib/schedule";
+import { fmtDays, phaseStats } from "@/lib/schedule";
 import TaskCard from "./TaskCard";
 import { TrashIcon, trashBtnCls } from "../ui";
 
@@ -32,6 +33,7 @@ type Props = {
 };
 
 export default function PhaseColumn(props: Props) {
+  const { t, date } = useI18n();
   const { phase, index, tasks, sizeDays, dates } = props;
   const st = phaseStats(tasks, sizeDays);
 
@@ -72,8 +74,8 @@ export default function PhaseColumn(props: Props) {
           {!props.readOnly && (
             <button
               className={trashBtnCls}
-              title="Удалить фазу"
-              aria-label="Удалить фазу"
+              title={t("Удалить фазу")}
+              aria-label={t("Удалить фазу")}
               onClick={() => props.onRemove(phase.id)}
             >
               <TrashIcon />
@@ -98,7 +100,7 @@ export default function PhaseColumn(props: Props) {
           >
             <button
               className={`${iconBtn} cursor-grab touch-none active:cursor-grabbing`}
-              title="Перетащить фазу"
+              title={t("Перетащить фазу")}
               {...attributes}
               {...listeners}
             >
@@ -106,7 +108,7 @@ export default function PhaseColumn(props: Props) {
             </button>
             <button
               className={iconBtn}
-              title="Влево"
+              title={t("Влево")}
               disabled={props.isFirst}
               onClick={() => props.onMove(phase.id, -1)}
             >
@@ -114,7 +116,7 @@ export default function PhaseColumn(props: Props) {
             </button>
             <button
               className={iconBtn}
-              title="Вправо"
+              title={t("Вправо")}
               disabled={props.isLast}
               onClick={() => props.onMove(phase.id, 1)}
             >
@@ -124,12 +126,13 @@ export default function PhaseColumn(props: Props) {
         </div>
         <div className="mt-2 flex flex-col gap-0.5 text-xs text-muted">
           <span>
-            <b className="text-ink">{st.progress}%</b> готово · осталось{" "}
-            <b className="text-ink">{fmtDays(st.remaining)}</b> дн.
+            <b className="text-ink">{st.progress}%</b> {t("готово")} ·{" "}
+            {t("осталось")}{" "}
+            <b className="text-ink">{fmtDays(st.remaining)}</b> {t("дн.")}
           </span>
           {dates && (
             <span>
-              {dateRu(dates.begin)} → {dateRu(dates.end)}
+              {date(dates.begin)} → {date(dates.end)}
             </span>
           )}
         </div>
@@ -143,15 +146,15 @@ export default function PhaseColumn(props: Props) {
           <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
             {st.discuss > 0 && (
               <span className="rounded-full border border-[#edd48e] bg-[#fff5d8] px-2 py-0.5 font-extrabold text-[#6b4c00]">
-                💬 {st.discuss} нужно обсудить
+                💬 {st.discuss} {t("нужно обсудить")}
               </span>
             )}
             {st.revisit > 0 && (
               <span
                 className="rounded-full border border-[#d9cdf5] bg-[#f6f2fe] px-2 py-0.5 font-extrabold text-[#5b3aa6]"
-                title="Задачи уже были сделаны и снова пересматриваются — на % фазы и сроки не влияют"
+                title={t("Задачи уже были сделаны и снова пересматриваются — на % фазы и сроки не влияют")}
               >
-                ↻ {st.revisit} на пересмотре
+                ↻ {st.revisit} {t("на пересмотре")}
               </span>
             )}
           </div>
@@ -186,7 +189,7 @@ export default function PhaseColumn(props: Props) {
             ))
           ) : (
             <div className="px-2.5 py-10 text-center text-xs text-[#999]">
-              Перетащите задачу сюда
+              {t("Перетащите задачу сюда")}
             </div>
           )}
         </SortableContext>
@@ -196,7 +199,7 @@ export default function PhaseColumn(props: Props) {
         onClick={props.onAddTask}
         className="mx-[11px] mt-0.5 mb-[13px] w-[calc(100%-22px)] rounded-[11px] border border-dashed border-[#bdbbb2] p-2.5 font-bold text-[#666] hover:bg-white"
       >
-        ＋ Добавить задачу
+        {t("＋ Добавить задачу")}
       </button>
     </article>
   );
