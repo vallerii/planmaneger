@@ -61,6 +61,8 @@ type Props = {
   onDelete?: () => void;
   /** комментарии, которые были для меня новыми, — подсветить */
   freshCommentIds?: Set<string>;
+  /** клиент / партнёр: только просмотр */
+  readOnly?: boolean;
 };
 
 const commentTime = new Intl.DateTimeFormat("ru-RU", {
@@ -86,6 +88,7 @@ export default function TaskDrawer({
   onCreate,
   onDelete,
   freshCommentIds,
+  readOnly = false,
 }: Props) {
   const isCreate = mode === "create";
   const supabase = useMemo(() => createClient(), []);
@@ -358,6 +361,7 @@ export default function TaskDrawer({
           </button>
           <input
             value={title}
+            readOnly={readOnly}
             autoFocus={isCreate}
             placeholder={isCreate ? "Название задачи" : undefined}
             onChange={(e) => setTitle(e.target.value)}
@@ -377,7 +381,7 @@ export default function TaskDrawer({
           <span className="shrink-0 rounded-full bg-[#efeee8] px-2 py-1 text-[10px] font-extrabold text-[#5d5b54]">
             {phaseName}
           </span>
-          {!isCreate && (
+          {!isCreate && !readOnly && (
             <button
               onClick={() => setShareOpen(true)}
               title="Поделиться ссылкой на задачу"
@@ -387,7 +391,7 @@ export default function TaskDrawer({
               <LinkIcon />
             </button>
           )}
-          {!isCreate && onDelete && (
+          {!isCreate && !readOnly && onDelete && (
             <button
               onClick={onDelete}
               title="Удалить задачу"
@@ -400,6 +404,14 @@ export default function TaskDrawer({
         </div>
 
         <div className="overflow-auto p-[18px]">
+          {readOnly && (
+            <div className="mb-3 rounded-[10px] bg-[#e6effc] px-3 py-2 text-sm text-[#1d4f9a]">
+              👁 Только просмотр — изменять задачу и писать комментарии может
+              команда проекта.
+            </div>
+          )}
+          {/* fieldset disabled — все поля ниже недоступны для правки */}
+          <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div className={card}>
               <label className={lbl}>Размер</label>
@@ -610,7 +622,12 @@ export default function TaskDrawer({
           </div>
 
           <SectionTitle>Описание</SectionTitle>
-          <RichEditor initial={task.description} onChange={onDescChange} />
+          </fieldset>
+          <RichEditor
+            initial={task.description}
+            onChange={onDescChange}
+            readOnly={readOnly}
+          />
 
           {!isCreate && (
             <div className="mt-5 border-t border-line pt-1">
@@ -665,7 +682,10 @@ export default function TaskDrawer({
                   );
                 })
               )}
-              <div className="mt-3 rounded-xl border border-line bg-[#faf9f6] p-[9px]">
+              <div
+                hidden={readOnly}
+                className="mt-3 rounded-xl border border-line bg-[#faf9f6] p-[9px]"
+              >
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}

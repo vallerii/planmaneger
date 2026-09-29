@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { Invite, Member, Profile } from "@/lib/types";
+import { ROLE_LABEL, type Invite, type Member, type Profile } from "@/lib/types";
 import { initials } from "@/lib/schedule";
 import { Btn, ConfirmDialog, Modal, inputCls } from "../ui";
 
@@ -78,6 +78,7 @@ export default function MembersModal({
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [role, setRole] = useState<"editor" | "viewer">("editor");
 
   async function reload() {
     const [{ data: m }, { data: inv }] = await Promise.all([
@@ -89,7 +90,7 @@ export default function MembersModal({
         .eq("project_id", projectId),
       supabase
         .from("project_invites")
-        .select("id,email,created_at")
+        .select("id,email,created_at,role")
         .eq("project_id", projectId)
         .order("created_at"),
     ]);
@@ -116,6 +117,7 @@ export default function MembersModal({
     const { data, error } = await supabase.rpc("invite_to_project", {
       p_project: projectId,
       p_email: v,
+      p_role: role,
     });
     setBusy(false);
     if (error) return setError(error.message);
@@ -140,6 +142,17 @@ export default function MembersModal({
   async function copyFor(addr: string) {
     if (await copy(inviteLink(addr, projectId, projectName)))
       toast("Ссылка скопирована");
+  }
+
+  async function changeRole(uid: string, next: "editor" | "viewer") {
+    const { error } = await supabase.rpc("set_member_role", {
+      p_project: projectId,
+      p_user: uid,
+      p_role: next,
+    });
+    if (error) return setError(error.message);
+    toast(next === "viewer" ? "Теперь только просмотр" : "Теперь редактор");
+    reload();
   }
 
   async function removeMember(uid: string) {
@@ -191,9 +204,29 @@ export default function MembersModal({
                   {m.profile?.email}
                 </div>
               </div>
-              <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">
-                {m.role === "owner" ? "владелец" : "редактор"}
-              </span>
+              {isOwner && m.role !== "owner" ? (
+                <select
+                  value={m.role}
+                  onChange={(e) =>
+                    changeRole(m.user_id, e.target.value as "editor" | "viewer")
+                  }
+                  title="Роль в проекте"
+                  className="rounded-full border-0 bg-[#efeee8] px-2 py-0.5 text-[11px] font-extrabold text-[#5d5b54] outline-none"
+                >
+                  <option value="editor">{ROLE_LABEL.editor}</option>
+                  <option value="viewer">{ROLE_LABEL.viewer}</option>
+                </select>
+              ) : (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                    m.role === "viewer"
+                      ? "bg-[#e6effc] text-[#1d4f9a]"
+                      : "bg-[#efeee8] text-[#5d5b54]"
+                  }`}
+                >
+                  {ROLE_LABEL[m.role] ?? m.role}
+                </span>
+              )}
               {isOwner && m.role !== "owner" && (
                 <button
                   onClick={() => setRemoveId(m.user_id)}
@@ -216,7 +249,10 @@ export default function MembersModal({
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate font-bold">{i.email}</div>
-              <div className="text-xs text-muted">ждёт регистрации</div>
+              <div className="text-xs text-muted">
+                ждёт регистрации ·{" "}
+                {i.role === "viewer" ? ROLE_LABEL.viewer : ROLE_LABEL.editor}
+              </div>
             </div>
             {isOwner && (
               <>
@@ -242,11 +278,33 @@ export default function MembersModal({
 
       {isOwner ? (
         <>
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-1 rounded-[11px] bg-[#f0efe9] p-1 text-sm font-bold">
+            {(
+              [
+                ["editor", "Редактор", "может всё менять"],
+                ["viewer", "Клиент / партнёр", "только просмотр"],
+              ] as const
+            ).map(([v, label, hint]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setRole(v)}
+                className={`flex-1 rounded-[8px] px-3 py-1.5 text-left transition ${
+                  role === v ? "bg-white shadow-sm" : "text-muted hover:text-ink"
+                }`}
+              >
+                {label}
+                <span className="block text-[11px] font-normal text-muted">
+                  {hint}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
             <input
               type="email"
               className={inputCls}
-              placeholder="email коллеги"
+              placeholder={role === "viewer" ? "email клиента или партнёра" : "email коллеги"}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}

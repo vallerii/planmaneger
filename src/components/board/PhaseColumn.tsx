@@ -27,6 +27,8 @@ type Props = {
   onOpenTask: (id: string) => void;
   onUpdateTask: (id: string, patch: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
+  /** только просмотр: без правок, перетаскивания и удаления */
+  readOnly?: boolean;
 };
 
 export default function PhaseColumn(props: Props) {
@@ -67,19 +69,22 @@ export default function PhaseColumn(props: Props) {
           <span className="text-[11px] font-extrabold tracking-[.1em] text-muted uppercase">
             Phase {index}
           </span>
-          <button
-            className={trashBtnCls}
-            title="Удалить фазу"
-            aria-label="Удалить фазу"
-            onClick={() => props.onRemove(phase.id)}
-          >
-            <TrashIcon />
-          </button>
+          {!props.readOnly && (
+            <button
+              className={trashBtnCls}
+              title="Удалить фазу"
+              aria-label="Удалить фазу"
+              onClick={() => props.onRemove(phase.id)}
+            >
+              <TrashIcon />
+            </button>
+          )}
         </div>
         <div className="mt-0.5 flex items-center gap-2">
           <input
             key={phase.name}
             defaultValue={phase.name}
+            readOnly={props.readOnly}
             onBlur={(e) => {
               const v = e.target.value.trim();
               if (v && v !== phase.name) props.onRename(phase.id, v);
@@ -88,7 +93,9 @@ export default function PhaseColumn(props: Props) {
             onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
             className="w-full min-w-0 rounded-[5px] bg-transparent p-0.5 text-lg font-extrabold tracking-tight outline-none focus:bg-white focus:outline focus:outline-line"
           />
-          <div className="flex items-center gap-1">
+          <div
+            className={`flex items-center gap-1 ${props.readOnly ? "hidden" : ""}`}
+          >
             <button
               className={`${iconBtn} cursor-grab touch-none active:cursor-grabbing`}
               title="Перетащить фазу"
@@ -167,8 +174,14 @@ export default function PhaseColumn(props: Props) {
                 index={i}
                 sizeDays={sizeDays}
                 onOpen={() => props.onOpenTask(t.id)}
-                onUpdate={(patch) => props.onUpdateTask(t.id, patch)}
-                onDelete={() => props.onDeleteTask(t.id)}
+                onUpdate={
+                  props.readOnly
+                    ? undefined
+                    : (patch) => props.onUpdateTask(t.id, patch)
+                }
+                onDelete={
+                  props.readOnly ? undefined : () => props.onDeleteTask(t.id)
+                }
               />
             ))
           ) : (
@@ -179,6 +192,7 @@ export default function PhaseColumn(props: Props) {
         </SortableContext>
       </div>
       <button
+        hidden={props.readOnly}
         onClick={props.onAddTask}
         className="mx-[11px] mt-0.5 mb-[13px] w-[calc(100%-22px)] rounded-[11px] border border-dashed border-[#bdbbb2] p-2.5 font-bold text-[#666] hover:bg-white"
       >

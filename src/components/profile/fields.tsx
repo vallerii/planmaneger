@@ -218,7 +218,7 @@ export function Section({
             onReviewed && (
               <button
                 onClick={onReviewed}
-                className="rounded-[8px] border border-line px-2 py-1 text-xs font-bold text-muted hover:bg-[#f5f4ef] hover:text-ink"
+                className="edit-only rounded-[8px] border border-line px-2 py-1 text-xs font-bold text-muted hover:bg-[#f5f4ef] hover:text-ink"
                 title="Проверили — данные актуальны, изменений нет"
               >
                 ✓ Актуально
@@ -242,7 +242,7 @@ export function RemoveBtn({
   return (
     <button
       onClick={onClick}
-      className={trashBtnCls}
+      className={`edit-only ${trashBtnCls}`}
       title={title}
       aria-label={title}
     >
@@ -261,7 +261,7 @@ export function AddBtn({
   return (
     <button
       onClick={onClick}
-      className="mt-3 w-full rounded-[12px] border border-dashed border-[#bdbbb2] p-2.5 text-sm font-bold text-[#666] hover:bg-[#faf9f6]"
+      className="edit-only mt-3 w-full rounded-[12px] border border-dashed border-[#bdbbb2] p-2.5 text-sm font-bold text-[#666] hover:bg-[#faf9f6]"
     >
       {children}
     </button>

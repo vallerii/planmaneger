@@ -40,6 +40,7 @@ export default async function ProfilePage({
     stepsFirst,
     cycleProbe,
     mvpProbe,
+    meRes,
   ] = await Promise.all([
     supabase
       .from("product_profiles")
@@ -76,11 +77,19 @@ export default async function ProfilePage({
     supabase.from("product_profiles").select("vision").limit(1),
     // шаблон цикла: MVP и пересмотр задач (миграция 0008)
     supabase.from("product_profiles").select("mvp").limit(1),
+    // моя роль в проекте: клиент / партнёр — только просмотр
+    supabase
+      .from("project_members")
+      .select("role")
+      .eq("project_id", id)
+      .eq("user_id", auth.user.id)
+      .maybeSingle(),
   ]);
+  const readOnly = meRes.data?.role === "viewer";
   // Задачи шаблона, созданные до миграции 0008, остались без связи с профилем —
   // привязываем их по названию, чтобы прогресс снова считался из профиля.
   let stepsRes = stepsFirst;
-  if (!mvpProbe.error) {
+  if (!mvpProbe.error && !readOnly) {
     const linked = await relinkTemplateTasks(supabase, id);
     if (linked) stepsRes = await selectSteps(supabase, id);
   }
@@ -114,6 +123,7 @@ export default async function ProfilePage({
       needsEconomics={needsEconomics}
       needsCycle={!missingTables && !!cycleProbe.error}
       needsTemplate={!missingTables && !!mvpProbe.error}
+      readOnly={readOnly}
       stepTasks={(steps.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}
       phases={(phasesRes.data ?? []) as { id: string; name: string }[]}

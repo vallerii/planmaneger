@@ -137,6 +137,9 @@ export default function Board({
 
   const sd = project.size_days;
   const isOwner = project.owner_id === me.id;
+  /** клиент / партнёр — только просмотр */
+  const readOnly =
+    members.find((m) => m.user_id === me.id)?.role === "viewer";
 
   const toast = useCallback((t: string) => {
     setToastText(t);
@@ -645,15 +648,26 @@ export default function Board({
             <ProjectTitle
               projectId={project.id}
               name={project.name}
-              onRename={(name) => updateProject({ name })}
+              onRename={readOnly ? undefined : (name) => updateProject({ name })}
             />
           </div>
           <ProjectNav projectId={project.id} active="board" />
           <div className="flex w-full gap-2 overflow-x-auto md:w-auto 2xl:flex-1 2xl:basis-0 2xl:justify-end">
-            <Btn onClick={() => setModal("date")}>
-              Старт: {dateRu(parseDate(project.start_date))}
-            </Btn>
-            <Btn onClick={() => setModal("settings")}>⚙ Настройки</Btn>
+            {readOnly ? (
+              <span
+                className="inline-flex items-center rounded-[11px] bg-[#e6effc] px-3 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
+                title="Вы можете смотреть проект, но не менять его"
+              >
+                👁 Только просмотр
+              </span>
+            ) : (
+              <>
+                <Btn onClick={() => setModal("date")}>
+                  Старт: {dateRu(parseDate(project.start_date))}
+                </Btn>
+                <Btn onClick={() => setModal("settings")}>⚙ Настройки</Btn>
+              </>
+            )}
             <Btn onClick={() => setModal("members")}>👥 {members.length}</Btn>
             {unread.enabled && (
               <CommentsBell
@@ -668,9 +682,11 @@ export default function Board({
               />
             )}
             <Btn onClick={exportJson}>Экспорт JSON</Btn>
-            <Btn variant="primary" onClick={() => setModal("phase")}>
-              ＋ Фаза
-            </Btn>
+            {!readOnly && (
+              <Btn variant="primary" onClick={() => setModal("phase")}>
+                ＋ Фаза
+              </Btn>
+            )}
           </div>
         </div>
 
@@ -717,7 +733,7 @@ export default function Board({
 
         <DndContext
           id="board-dnd"
-          sensors={sensors}
+          sensors={readOnly ? [] : sensors}
           collisionDetection={collision}
           onDragStart={onDragStart}
           onDragOver={onDragOver}
@@ -765,14 +781,17 @@ export default function Board({
                   onDeleteTask={setConfirmTask}
                   isFirst={idx === 0}
                   isLast={idx === phases.length - 1}
+                  readOnly={readOnly}
                 />
               ))}
-              <button
-                onClick={() => setModal("phase")}
-                className="min-h-[120px] rounded-[17px] border border-dashed border-[#bdbbb2] font-bold text-muted hover:bg-white"
-              >
-                ＋ Добавить фазу
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => setModal("phase")}
+                  className="min-h-[120px] rounded-[17px] border border-dashed border-[#bdbbb2] font-bold text-muted hover:bg-white"
+                >
+                  ＋ Добавить фазу
+                </button>
+              )}
             </section>
           </SortableContext>
           <DragOverlay>
@@ -807,6 +826,7 @@ export default function Board({
           projectId={project.id}
           hypotheses={hypotheses}
           freshCommentIds={fresh.task === activeTask.id ? fresh.ids : undefined}
+          readOnly={readOnly}
           onClose={() => setActiveTaskId(null)}
           onUpdate={(patch) => updateTask(activeTask.id, patch)}
           onDelete={() => setConfirmTask(activeTask.id)}

@@ -102,8 +102,22 @@ export type Comment = {
 
 export type Member = {
   user_id: string;
-  role: "owner" | "editor";
+  role: Role;
   profile: Profile | null;
 };
 
-export type Invite = { id: string; email: string; created_at: string };
+export type Invite = {
+  id: string;
+  email: string;
+  created_at: string;
+  role?: "editor" | "viewer";
+};
+
+/** owner — владелец, editor — редактор, viewer — клиент / партнёр (только просмотр). */
+export type Role = "owner" | "editor" | "viewer";
+
+export const ROLE_LABEL: Record<Role, string> = {
+  owner: "владелец",
+  editor: "редактор",
+  viewer: "клиент · просмотр",
+};

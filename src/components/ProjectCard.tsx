@@ -16,6 +16,8 @@ export type ProjectCardData = {
   isOwner: boolean;
   /** непрочитанные мной комментарии */
   unread?: number;
+  /** клиент / партнёр — только просмотр */
+  viewer?: boolean;
 };
 
 export default function ProjectCard({ p }: { p: ProjectCardData }) {
@@ -59,11 +61,16 @@ export default function ProjectCard({ p }: { p: ProjectCardData }) {
               />
             )}
           </h2>
-          {!p.isOwner && (
-            <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">
-              гость
-            </span>
-          )}
+          {!p.isOwner &&
+            (p.viewer ? (
+              <span className="rounded-full bg-[#e6effc] px-2 py-0.5 text-[10px] font-extrabold text-[#1d4f9a]">
+                просмотр
+              </span>
+            ) : (
+              <span className="rounded-full bg-[#efeee8] px-2 py-0.5 text-[10px] font-extrabold text-[#5d5b54]">
+                гость
+              </span>
+            ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted">
           <span>

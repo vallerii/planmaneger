@@ -11,7 +11,7 @@ export default async function Home() {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) redirect("/login?expired=1");
 
-  const [{ data: profile }, { data: projects }, unreadRes] = await Promise.all([
+  const [{ data: profile }, { data: projects }, unreadRes, rolesRes] = await Promise.all([
     supabase
       .from("profiles")
       .select("full_name,email")
@@ -25,7 +25,16 @@ export default async function Home() {
       .order("created_at", { ascending: false }),
     // непрочитанные комментарии по проектам (миграция 0009; без неё — просто пусто)
     supabase.rpc("my_unread_projects"),
+    supabase
+      .from("project_members")
+      .select("project_id,role")
+      .eq("user_id", auth.user.id),
   ]);
+  const roles = new Map(
+    ((rolesRes.data ?? []) as { project_id: string; role: string }[]).map(
+      (r) => [r.project_id, r.role],
+    ),
+  );
   const unread = new Map<string, number>(
     ((unreadRes.data ?? []) as { project_id: string; unread: number }[]).map(
       (r) => [r.project_id, r.unread],
@@ -78,6 +87,7 @@ export default async function Home() {
                   members: count(p.project_members),
                   isOwner: p.owner_id === auth.user!.id,
                   unread: unread.get(p.id) ?? 0,
+                  viewer: roles.get(p.id) === "viewer",
                 }}
               />
             ))}

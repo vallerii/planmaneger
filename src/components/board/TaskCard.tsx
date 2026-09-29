@@ -121,6 +121,11 @@ export function TaskCardView({
           осталось {fmtDays(remainingTaskDays(t, sizeDays))} из{" "}
           {fmtDays(sizeOf(t, sizeDays))} дн.
         </span>
+        {!onUpdate ? (
+          <span className="rounded-[7px] bg-[#f0efe9] px-2 py-0.5 text-xs font-extrabold">
+            {t.size}
+          </span>
+        ) : (
         <Select
           size="sm"
           value={t.size}
@@ -133,6 +138,7 @@ export function TaskCardView({
             hint: `${sizeDays[s]} ${sizeDays[s] === 1 ? "день" : "дн."}`,
           }))}
         />
+        )}
       </div>
 
       <label
@@ -144,6 +150,8 @@ export function TaskCardView({
         <input
           type="date"
           value={t.deadline ?? ""}
+          readOnly={!onUpdate}
+          disabled={!onUpdate && !t.deadline}
           onChange={(e) => onUpdate?.({ deadline: e.target.value || null })}
           title="Дедлайн задачи — не влияет на планирование"
           className={`min-w-0 flex-1 rounded-[7px] border-0 px-1.5 py-1 text-[11px] outline-none focus:bg-white focus:outline focus:outline-line ${
@@ -190,8 +198,8 @@ export default function TaskCard({
   index: number;
   sizeDays: SizeDays;
   onOpen: () => void;
-  onUpdate: (patch: Partial<Task>) => void;
-  onDelete: () => void;
+  onUpdate?: (patch: Partial<Task>) => void;
+  onDelete?: () => void;
 }) {
   const {
     attributes,

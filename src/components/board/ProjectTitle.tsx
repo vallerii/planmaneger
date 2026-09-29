@@ -19,7 +19,8 @@ export default function ProjectTitle({
 }: {
   projectId: string;
   name: string;
-  onRename: (name: string) => void;
+  /** нет — переименовывать нельзя (только просмотр) */
+  onRename?: (name: string) => void;
   /** вернуть false, чтобы отменить переход (например, есть несохранённое) */
   onBeforeNavigate?: (href: string) => boolean;
 }) {
@@ -65,7 +66,7 @@ export default function ProjectTitle({
     if (!editingRef.current) return;
     editingRef.current = false;
     const v = value.trim();
-    if (v && v !== name) onRename(v);
+    if (v && v !== name) onRename?.(v);
     setEditing(false);
   }
 
@@ -122,6 +123,7 @@ export default function ProjectTitle({
       >
         {name}
       </h1>
+      {onRename && (
       <button
         className={iconBtn}
         title="Переименовать проект"
@@ -143,6 +145,7 @@ export default function ProjectTitle({
           <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
         </svg>
       </button>
+      )}
       <button
         className={`${iconBtn} ${open ? "bg-white text-ink" : ""}`}
         title="Другие проекты"

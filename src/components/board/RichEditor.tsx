@@ -8,12 +8,16 @@ import { Placeholder } from "@tiptap/extensions";
 export default function RichEditor({
   initial,
   onChange,
+  readOnly = false,
 }: {
   initial: string;
   onChange: (html: string) => void;
+  /** только просмотр: без панели инструментов и редактирования */
+  readOnly?: boolean;
 }) {
   const editor = useEditor({
     immediatelyRender: false,
+    editable: !readOnly,
     extensions: [
       StarterKit.configure({
         heading: { levels: [2, 3] },
@@ -85,6 +89,7 @@ export default function RichEditor({
   return (
     <div className="overflow-hidden rounded-[13px] border border-line">
       <div
+        hidden={readOnly}
         className="flex flex-wrap items-center gap-[3px] border-b border-line bg-[#faf9f6] p-[7px]"
         onMouseDown={(e) => e.preventDefault()}
       >

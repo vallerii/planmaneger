@@ -125,6 +125,7 @@ export default function ProfileApp({
   needsEconomics = false,
   needsCycle = false,
   needsTemplate = false,
+  readOnly = false,
   initialTasks = [],
   phases = [],
   stepTasks: initialStepTasks = [],
@@ -140,6 +141,8 @@ export default function ProfileApp({
   needsEconomics?: boolean;
   needsCycle?: boolean;
   needsTemplate?: boolean;
+  /** клиент / партнёр: только просмотр */
+  readOnly?: boolean;
   initialTasks?: LinkedTask[];
   phases?: { id: string; name: string }[];
   stepTasks?: StepTask[];
@@ -382,7 +385,7 @@ export default function ProfileApp({
   // пересчитать прогресс связанных задач при открытии профиля:
   // данные могли измениться, пока задачи ещё не были связаны с профилем
   useEffect(() => {
-    if (!missingTables) syncSteps();
+    if (!missingTables && !readOnly) syncSteps();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -594,7 +597,7 @@ export default function ProfileApp({
     if (p.value?.trim() && !t.value?.trim()) patch.value = p.value;
     if (p.difference?.trim() && !t.advantage?.trim())
       patch.advantage = p.difference;
-    if (Object.keys(patch).length && !missingTables)
+    if (Object.keys(patch).length && !missingTables && !readOnly)
       writeProfileNow({ thesis: { ...t, ...patch } });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -663,12 +666,12 @@ export default function ProfileApp({
     const h = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
         e.preventDefault();
-        saveAll();
+        if (!readOnly) saveAll();
       }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [saveAll]);
+  }, [saveAll, readOnly]);
 
   const byKind = useCallback(
     (k: ItemKind) =>
@@ -724,7 +727,7 @@ export default function ProfileApp({
             <ProjectTitle
               projectId={project.id}
               name={name}
-              onRename={rename}
+              onRename={readOnly ? undefined : rename}
               onBeforeNavigate={(href) => {
                 if (!dirtyCount) return true;
                 setLeaveTo(href);
@@ -734,6 +737,14 @@ export default function ProfileApp({
           </div>
           <ProjectNav projectId={project.id} active="profile" />
           <div className="flex shrink-0 justify-end md:flex-1 md:basis-0">
+            {readOnly ? (
+              <span
+                className="rounded-[10px] bg-[#e6effc] px-3.5 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
+                title="Вы можете смотреть профиль, но не менять его"
+              >
+                👁 Только просмотр
+              </span>
+            ) : (
             <button
               onClick={() => saveAll()}
               disabled={!dirtyCount || saving}
@@ -746,6 +757,7 @@ export default function ProfileApp({
             >
               {saving ? "Сохраняю…" : dirtyCount ? "Сохранить" : "Сохранено ✓"}
             </button>
+            )}
           </div>
         </div>
         <div className="mt-4 flex gap-1 overflow-x-auto">
@@ -767,6 +779,8 @@ export default function ProfileApp({
       </header>
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-6">
+        {/* только просмотр: все поля и кнопки правки внутри недоступны */}
+        <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
         {missingTables && (
           <div className="mb-5 rounded-[13px] border border-[#edd48e] bg-[#fff5d8] px-4 py-3 text-sm text-[#6b4c00]">
             В базе ещё нет таблиц профиля. Запустите{" "}
@@ -805,6 +819,7 @@ export default function ProfileApp({
         {tab === "metrics" && <MetricsTab ctx={ctx} />}
         {tab === "gtm" && <GtmTab ctx={ctx} />}
         {tab === "decisions" && <Decisions ctx={ctx} />}
+        </fieldset>
       </main>
 
       <ConfirmDialog
