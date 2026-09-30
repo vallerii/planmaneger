@@ -59,6 +59,9 @@ import MembersModal from "./MembersModal";
 import ProjectTitle from "./ProjectTitle";
 import ProjectNav from "../ProjectNav";
 import type { HypothesisRef } from "./TaskDrawer";
+import type { TrMap } from "@/lib/translate/content";
+import { ContentTrProvider, useMakeContentTr } from "@/lib/translate/client";
+import { TranslatePanel, TranslationBar } from "../Translation";
 
 type Props = {
   initialProject: Project;
@@ -70,6 +73,8 @@ type Props = {
   /** null — миграция 0004 ещё не применена, связь с гипотезами скрыта */
   hypotheses?: HypothesisRef[] | null;
   initialTaskId?: string | null;
+  /** AI-перевод контента для EN / DE (миграция 0012) */
+  translations?: TrMap | null;
 };
 
 const byPos = <T extends { position: number }>(a: T, b: T) =>
@@ -84,9 +89,12 @@ export default function Board({
   mission,
   hypotheses = null,
   initialTaskId = null,
+  translations = null,
 }: Props) {
   const i18n = useI18n();
   const { t } = i18n;
+  // EN / DE — показываем перевод, редактирование только в русской версии
+  const tr = useMakeContentTr(translations);
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [project, setProject] = useState(initialProject);
@@ -142,8 +150,10 @@ export default function Board({
   const sd = project.size_days;
   const isOwner = project.owner_id === me.id;
   /** клиент / партнёр — только просмотр */
-  const readOnly =
+  const isViewer =
     members.find((m) => m.user_id === me.id)?.role === "viewer";
+  /** в EN / DE ничего не редактируется: источник правды — русский текст */
+  const readOnly = isViewer || tr.active;
 
   const toast = useCallback((t: string) => {
     setToastText(t);
@@ -162,10 +172,21 @@ export default function Board({
     const map: Record<string, Task[]> = {};
     for (const p of phases) map[p.id] = [];
     for (const t of tasks)
-      (map[t.phase_id] ??= []).push({ ...t, unread: unread.byTask[t.id] ?? 0 });
+      (map[t.phase_id] ??= []).push(
+        tr.task({ ...t, unread: unread.byTask[t.id] ?? 0 }),
+      );
     for (const k in map) map[k].sort(byPos);
     return map;
-  }, [phases, tasks, unread.byTask]);
+  }, [phases, tasks, unread.byTask, tr]);
+  const phasesView = useMemo(() => phases.map(tr.phase), [phases, tr]);
+  const hypothesesView = useMemo(
+    () =>
+      hypotheses?.map((h) => ({
+        ...h,
+        title: tr.text(`item:${h.id}.title`, h.title),
+      })) ?? null,
+    [hypotheses, tr],
+  );
 
   const schedule = useMemo(
     () => buildSchedule(project.start_date, phases, columns, sd),
@@ -605,11 +626,12 @@ export default function Board({
     dragging?.type === "phase"
       ? phases.find((p) => p.id === dragging.id)
       : null;
-  const activeTask = activeTaskId
+  const activeTaskRaw = activeTaskId
     ? (tasks.find((t) => t.id === activeTaskId) ?? null)
     : null;
+  const activeTask = activeTaskRaw ? tr.task(activeTaskRaw) : null;
   const activePhase = activeTask
-    ? phases.find((p) => p.id === activeTask.phase_id)
+    ? phasesView.find((p) => p.id === activeTask.phase_id)
     : null;
 
   // ---------- export ----------
@@ -642,6 +664,7 @@ export default function Board({
   }
 
   return (
+    <ContentTrProvider value={tr}>
     <div className="min-h-screen">
       <header className="z-10 md:sticky md:top-0 border-b border-line bg-bg/90 px-3.5 py-4 backdrop-blur md:px-6">
         <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
@@ -651,19 +674,21 @@ export default function Board({
             </Link>
             <ProjectTitle
               projectId={project.id}
-              name={project.name}
+              name={tr.projectName(project.name)}
               onRename={readOnly ? undefined : (name) => updateProject({ name })}
             />
           </div>
           <ProjectNav projectId={project.id} active="board" />
           <div className="flex w-full gap-2 overflow-x-auto md:w-auto 2xl:flex-1 2xl:basis-0 2xl:justify-end">
             {readOnly ? (
-              <span
-                className="inline-flex items-center rounded-[11px] bg-[#e6effc] px-3 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
-                title={t("Вы можете смотреть проект, но не менять его")}
-              >
-                {t("👁 Только просмотр")}
-              </span>
+              isViewer && (
+                <span
+                  className="inline-flex items-center rounded-[11px] bg-[#e6effc] px-3 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
+                  title={t("Вы можете смотреть проект, но не менять его")}
+                >
+                  {t("👁 Только просмотр")}
+                </span>
+              )
             ) : (
               <>
                 <Btn onClick={() => setModal("date")}>
@@ -705,7 +730,7 @@ export default function Board({
           </span>
           {mission?.trim() ? (
             <span className="min-w-0 flex-1 truncate font-semibold">
-              {mission}
+              {tr.text("profile.mission", mission)}
             </span>
           ) : (
             <span className="min-w-0 flex-1 truncate text-muted">
@@ -716,6 +741,7 @@ export default function Board({
             {t("Профиль →")}
           </span>
         </Link>
+        {tr.active && !isViewer && <TranslationBar projectId={project.id} />}
       </header>
 
       <main className="px-4 pt-5 pb-10 md:px-6">
@@ -736,6 +762,8 @@ export default function Board({
 
         <DndContext
           id="board-dnd"
+          // key: при смене режима (RU ↔ EN/DE) список сенсоров меняет длину — пересоздаём
+          key={readOnly ? "view" : "edit"}
           sensors={readOnly ? [] : sensors}
           collisionDetection={collision}
           onDragStart={onDragStart}
@@ -748,7 +776,7 @@ export default function Board({
             strategy={horizontalListSortingStrategy}
           >
             <section className="grid auto-cols-[minmax(285px,88vw)] grid-flow-col items-start gap-3.5 overflow-x-auto pb-4 md:auto-cols-[minmax(310px,350px)]">
-              {phases.map((p, idx) => (
+              {phasesView.map((p, idx) => (
                 <PhaseColumn
                   key={p.id}
                   phase={p}
@@ -820,14 +848,14 @@ export default function Board({
 
       {activeTask && (
         <TaskDrawer
-          key={activeTask.id}
+          key={`${activeTask.id}-${i18n.lang}`}
           task={activeTask}
           phaseName={activePhase?.name ?? ""}
           sizeDays={sd}
           me={me}
           members={members}
           projectId={project.id}
-          hypotheses={hypotheses}
+          hypotheses={hypothesesView}
           freshCommentIds={fresh.task === activeTask.id ? fresh.ids : undefined}
           readOnly={readOnly}
           onClose={() => setActiveTaskId(null)}
@@ -889,6 +917,7 @@ export default function Board({
       {modal === "settings" && (
         <SettingsModal
           open
+          projectId={project.id}
           sizeDays={sd}
           isOwner={isOwner}
           onClose={() => setModal(null)}
@@ -947,6 +976,7 @@ export default function Board({
       )}
       <Toast text={toastText} />
     </div>
+    </ContentTrProvider>
   );
 }
 
@@ -1057,6 +1087,7 @@ function DateModal({
 
 function SettingsModal({
   open,
+  projectId,
   sizeDays,
   isOwner,
   onClose,
@@ -1064,6 +1095,7 @@ function SettingsModal({
   onDelete,
 }: {
   open: boolean;
+  projectId: string;
   sizeDays: SizeDays;
   isOwner: boolean;
   onClose: () => void;
@@ -1075,7 +1107,7 @@ function SettingsModal({
     Object.fromEntries(SIZES.map((k) => [k, String(sizeDays[k])])),
   );
   return (
-    <Modal open={open} onClose={onClose} title={t("Настройки планировщика")}>
+    <Modal open={open} onClose={onClose} title={t("Настройки проекта")}>
       <Field label={t("Размер задачи → рабочих дней")}>
         <span className="grid grid-cols-[1fr_110px] items-center gap-2">
           {SIZES.map((k) => (
@@ -1096,6 +1128,9 @@ function SettingsModal({
       <p className="text-[11px] text-muted">
         {t("Изменение длительности сразу пересчитает оставшиеся дни, прогресс фаз и дату запуска.")}
       </p>
+      <div className="mt-4">
+        <TranslatePanel projectId={projectId} />
+      </div>
       <div className="mt-5 flex flex-wrap justify-between gap-2">
         {isOwner ? (
           <Btn variant="danger" onClick={onDelete}>

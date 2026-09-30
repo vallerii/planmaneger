@@ -10,6 +10,9 @@ import { taskStepProgress, type ProfileStep } from "@/lib/steps";
 import ProjectTitle from "../board/ProjectTitle";
 import ProjectNav from "../ProjectNav";
 import LangSwitcher from "../LangSwitcher";
+import { TranslationBar } from "../Translation";
+import type { TrMap } from "@/lib/translate/content";
+import { ContentTrProvider, useMakeContentTr } from "@/lib/translate/client";
 import {
   DEFAULT_STATUS,
   KIND_LABEL,
@@ -127,10 +130,11 @@ export default function ProfileApp({
   needsEconomics = false,
   needsCycle = false,
   needsTemplate = false,
-  readOnly = false,
+  readOnly: isViewer = false,
   initialTasks = [],
   phases = [],
   stepTasks: initialStepTasks = [],
+  translations = null,
 }: {
   project: { id: string; name: string };
   initialProfile: ProductProfile;
@@ -148,8 +152,13 @@ export default function ProfileApp({
   initialTasks?: LinkedTask[];
   phases?: { id: string; name: string }[];
   stepTasks?: StepTask[];
+  /** AI-перевод контента для EN / DE (миграция 0012) */
+  translations?: TrMap | null;
 }) {
   const { t, rich, lang } = useI18n();
+  // EN / DE — показываем перевод, редактирование только в русской версии
+  const tr = useMakeContentTr(translations);
+  const readOnly = isViewer || tr.active;
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [name, setName] = useState(project.name);
@@ -677,16 +686,24 @@ export default function ProfileApp({
     return () => window.removeEventListener("keydown", h);
   }, [saveAll, readOnly]);
 
+  // в EN / DE компоненты получают уже переведённые данные (всё только для чтения)
+  const itemsView = useMemo(() => items.map(tr.item), [items, tr]);
+  const profileView = useMemo(() => tr.profile(profile), [profile, tr]);
+  const tasksView = useMemo(() => tasks.map(tr.task), [tasks, tr]);
+  const phasesView = useMemo(() => phases.map(tr.phase), [phases, tr]);
+
   const byKind = useCallback(
     (k: ItemKind) =>
-      items.filter((i) => i.kind === k).sort((a, b) => a.position - b.position),
-    [items],
+      itemsView
+        .filter((i) => i.kind === k)
+        .sort((a, b) => a.position - b.position),
+    [itemsView],
   );
 
   const ctx: ProfileCtx = {
-    projectName: name,
-    profile,
-    items,
+    projectName: tr.projectName(name),
+    profile: profileView,
+    items: itemsView,
     history,
     byKind,
     saveProfile,
@@ -704,8 +721,8 @@ export default function ProfileApp({
     canEconomics: !needsEconomics,
     canCycle: !needsCycle,
     projectId: project.id,
-    phases,
-    tasks,
+    phases: phasesView,
+    tasks: tasksView,
     canLinkTasks: !needsMarket,
     createTask,
     canMvp: !needsTemplate,
@@ -721,6 +738,7 @@ export default function ProfileApp({
   }
 
   return (
+    <ContentTrProvider value={tr}>
     <div className="min-h-screen">
       <header className="z-10 border-b border-line bg-bg/90 px-3.5 py-4 backdrop-blur md:sticky md:top-0 md:px-6">
         <div className="flex flex-wrap items-center gap-3 md:flex-nowrap md:gap-4">
@@ -730,7 +748,7 @@ export default function ProfileApp({
             </Link>
             <ProjectTitle
               projectId={project.id}
-              name={name}
+              name={tr.projectName(name)}
               onRename={readOnly ? undefined : rename}
               onBeforeNavigate={(href) => {
                 if (!dirtyCount) return true;
@@ -743,12 +761,14 @@ export default function ProfileApp({
           <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1 md:basis-0">
             <LangSwitcher />
             {readOnly ? (
-              <span
-                className="rounded-[10px] bg-[#e6effc] px-3.5 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
-                title={t("Вы можете смотреть профиль, но не менять его")}
-              >
-                {t("👁 Только просмотр")}
-              </span>
+              isViewer && (
+                <span
+                  className="rounded-[10px] bg-[#e6effc] px-3.5 py-2 text-sm font-bold whitespace-nowrap text-[#1d4f9a]"
+                  title={t("Вы можете смотреть профиль, но не менять его")}
+                >
+                  {t("👁 Только просмотр")}
+                </span>
+              )
             ) : (
             <button
               onClick={() => saveAll()}
@@ -781,9 +801,11 @@ export default function ProfileApp({
             </button>
           ))}
         </div>
+        {tr.active && !isViewer && <TranslationBar projectId={project.id} />}
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-6">
+      {/* key: при смене языка поля пересоздаются с новыми значениями */}
+      <main key={lang} className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-6">
         {/* только просмотр: все поля и кнопки правки внутри недоступны */}
         <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
         {missingTables && (
@@ -876,5 +898,6 @@ export default function ProfileApp({
       </Modal>
       <Toast text={toastText} />
     </div>
+    </ContentTrProvider>
   );
 }

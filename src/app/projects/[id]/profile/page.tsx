@@ -9,6 +9,8 @@ import {
   type ProductProfile,
   type ProfileItem,
 } from "@/lib/profile";
+import { getLang } from "@/i18n/server";
+import { loadPageTranslation } from "@/lib/translate/server";
 
 export default async function ProfilePage({
   params,
@@ -86,6 +88,7 @@ export default async function ProfilePage({
       .maybeSingle(),
   ]);
   const readOnly = meRes.data?.role === "viewer";
+  const translations = await loadPageTranslation(supabase, id, await getLang());
   // Задачи шаблона, созданные до миграции 0008, остались без связи с профилем —
   // привязываем их по названию, чтобы прогресс снова считался из профиля.
   let stepsRes = stepsFirst;
@@ -127,6 +130,7 @@ export default async function ProfilePage({
       stepTasks={(steps.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}
       phases={(phasesRes.data ?? []) as { id: string; name: string }[]}
+      translations={translations}
     />
   );
 }

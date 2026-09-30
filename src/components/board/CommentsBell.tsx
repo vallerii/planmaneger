@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/i18n/client";
+import { useContentTr } from "@/lib/translate/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { UnreadComment } from "@/lib/unread";
 import { plainFromHtml } from "@/lib/schedule";
@@ -16,6 +17,7 @@ export default function CommentsBell({
   onReadAll: () => void;
 }) {
   const { t, locale } = useI18n();
+  const ctr = useContentTr();
   const time = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -121,7 +123,9 @@ export default function CommentsBell({
                     <div className="flex items-baseline gap-2">
                       <span className="h-2 w-2 shrink-0 translate-y-[-1px] rounded-full bg-bad" />
                       <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                        {c.task_name ? t(c.task_name) : t("Без названия")}
+                        {c.task_name
+                          ? t(ctr.text(`task:${c.task_id}.name`, c.task_name))
+                          : t("Без названия")}
                       </span>
                       <time className="shrink-0 text-[10px] text-muted">
                         {time.format(new Date(c.created_at))}
@@ -129,7 +133,7 @@ export default function CommentsBell({
                     </div>
                     <div className="mt-0.5 line-clamp-2 pl-4 text-xs text-[#45443e]">
                       <b>{c.author_name || t("Участник")}:</b>{" "}
-                      {plainFromHtml(c.body)}
+                      {plainFromHtml(ctr.text(`comment:${c.id}.body`, c.body))}
                     </div>
                   </button>
                 </li>

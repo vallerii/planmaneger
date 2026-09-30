@@ -1,6 +1,7 @@
 "use client";
 
 import { useI18n } from "@/i18n/client";
+import { useContentTr } from "@/lib/translate/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { STATUSES, STATUS_META, type Status } from "@/lib/types";
@@ -86,6 +87,7 @@ export default function TaskDrawer({
   readOnly = false,
 }: Props) {
   const { t, locale, workdays, html, lang } = useI18n();
+  const ctr = useContentTr();
   const commentTime = useMemo(
     () =>
       new Intl.DateTimeFormat(locale, {
@@ -646,7 +648,7 @@ export default function TaskDrawer({
               ) : comments.length === 0 ? (
                 <div className="py-4 text-[#999]">{t("Пока нет комментариев.")}</div>
               ) : (
-                comments.map((c) => {
+                comments.map(ctr.comment).map((c) => {
                   const author =
                     c.author?.full_name || c.author?.email || t("Пользователь");
                   const fresh =

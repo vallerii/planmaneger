@@ -1687,4 +1687,40 @@ export const en: Record<string, string> = {
     "Open profile →",
   "Поговорить минимум с 8 потенциальными клиентами. Ставьте клиенту статус «Разговор» или «Пилот» и записывайте, что узнали.":
     "Talk to at least 8 potential customers. Set the customer's status to “Talked” or “Pilot” and record what you learned.",
+  "ещё не переводили":
+    "not translated yet",
+  "Не задан OPENAI_API_KEY в переменных окружения (Vercel → Settings → Environment Variables).":
+    "OPENAI_API_KEY is not set in the environment variables (Vercel → Settings → Environment Variables).",
+  "Перевожу {done} / {total}…":
+    "Translating {done} / {total}…",
+  "✓ Перевод актуален":
+    "✓ Translation is up to date",
+  "Обновить перевод":
+    "Update translation",
+  "Перевод для партнёров":
+    "Translation for partners",
+  "Задачи, профиль и названия переводятся на английский и немецкий по кнопке. Переводятся только новые и изменённые тексты.":
+    "Tasks, the profile and names are translated into English and German with one click. Only new and changed texts are translated.",
+  "обновлён":
+    "updated",
+  "ждут перевода: {n}":
+    "waiting for translation: {n}",
+  "Переводить комментарии":
+    "Translate comments",
+  "Вы смотрите перевод — здесь ничего не редактируется. Редактирование — в русской версии.":
+    "You're viewing the translation — nothing can be edited here. Editing happens in the Russian version.",
+  "Перевод обновлён":
+    "Translation updated",
+  "не переведено изменений: {n}":
+    "untranslated changes: {n}",
+  "Редактировать на русском":
+    "Edit in Russian",
+  "Настройки проекта":
+    "Project settings",
+  "Запустите supabase/migrations/0012_translations.sql в Supabase → SQL Editor.":
+    "Run supabase/migrations/0012_translations.sql in Supabase → SQL Editor.",
+  "Часть текстов не удалось перевести — попробуйте ещё раз.":
+    "Some texts couldn't be translated — please try again.",
+  "Сессия истекла — обновите страницу и войдите снова.":
+    "Your session has expired — reload the page and sign in again.",
 };

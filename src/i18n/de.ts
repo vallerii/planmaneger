@@ -1687,4 +1687,40 @@ export const de: Record<string, string> = {
     "Profil öffnen →",
   "Поговорить минимум с 8 потенциальными клиентами. Ставьте клиенту статус «Разговор» или «Пилот» и записывайте, что узнали.":
     "Sprechen Sie mit mindestens 8 potenziellen Kunden. Setzen Sie den Status des Kunden auf „Gespräch“ oder „Pilot“ und halten Sie fest, was Sie erfahren haben.",
+  "ещё не переводили":
+    "noch nicht übersetzt",
+  "Не задан OPENAI_API_KEY в переменных окружения (Vercel → Settings → Environment Variables).":
+    "OPENAI_API_KEY ist in den Umgebungsvariablen nicht gesetzt (Vercel → Settings → Environment Variables).",
+  "Перевожу {done} / {total}…":
+    "Übersetze {done} / {total}…",
+  "✓ Перевод актуален":
+    "✓ Übersetzung ist aktuell",
+  "Обновить перевод":
+    "Übersetzung aktualisieren",
+  "Перевод для партнёров":
+    "Übersetzung für Partner",
+  "Задачи, профиль и названия переводятся на английский и немецкий по кнопке. Переводятся только новые и изменённые тексты.":
+    "Aufgaben, Profil und Namen werden per Klick ins Englische und Deutsche übersetzt. Übersetzt werden nur neue und geänderte Texte.",
+  "обновлён":
+    "aktualisiert",
+  "ждут перевода: {n}":
+    "warten auf Übersetzung: {n}",
+  "Переводить комментарии":
+    "Kommentare übersetzen",
+  "Вы смотрите перевод — здесь ничего не редактируется. Редактирование — в русской версии.":
+    "Sie sehen die Übersetzung – hier lässt sich nichts bearbeiten. Bearbeitet wird in der russischen Version.",
+  "Перевод обновлён":
+    "Übersetzung aktualisiert",
+  "не переведено изменений: {n}":
+    "nicht übersetzte Änderungen: {n}",
+  "Редактировать на русском":
+    "Auf Russisch bearbeiten",
+  "Настройки проекта":
+    "Projekteinstellungen",
+  "Запустите supabase/migrations/0012_translations.sql в Supabase → SQL Editor.":
+    "Führen Sie supabase/migrations/0012_translations.sql in Supabase → SQL Editor aus.",
+  "Часть текстов не удалось перевести — попробуйте ещё раз.":
+    "Einige Texte konnten nicht übersetzt werden – bitte versuchen Sie es erneut.",
+  "Сессия истекла — обновите страницу и войдите снова.":
+    "Ihre Sitzung ist abgelaufen – laden Sie die Seite neu und melden Sie sich erneut an.",
 };

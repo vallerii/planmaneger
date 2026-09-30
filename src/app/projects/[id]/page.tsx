@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import Board from "@/components/board/Board";
 import type { Member, Phase, Project, Task } from "@/lib/types";
 import { DEFAULT_SIZE_DAYS } from "@/lib/types";
+import { getLang } from "@/i18n/server";
+import { loadPageTranslation } from "@/lib/translate/server";
 
 export default async function ProjectPage({
   params,
@@ -32,6 +34,7 @@ export default async function ProjectPage({
     { data: profile },
     hypRes,
     linkProbe,
+    translations,
   ] = await Promise.all([
     supabase.from("phases").select("*").eq("project_id", id).order("position"),
     supabase
@@ -62,6 +65,7 @@ export default async function ProjectPage({
       .order("position"),
     // есть ли колонка tasks.hypothesis_id (миграция 0004)
     supabase.from("tasks").select("hypothesis_id").limit(1),
+    getLang().then((l) => loadPageTranslation(supabase, id, l)),
   ]);
   const hypotheses =
     hypRes.error || linkProbe.error
@@ -89,6 +93,7 @@ export default async function ProjectPage({
       mission={profile?.mission ?? null}
       hypotheses={hypotheses}
       initialTaskId={openTaskId ?? null}
+      translations={translations}
     />
   );
 }

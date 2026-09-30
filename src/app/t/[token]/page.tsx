@@ -11,6 +11,7 @@ import {
 import { parseDate } from "@/lib/schedule";
 import { getI18n } from "@/i18n/server";
 import LangSwitcher from "@/components/LangSwitcher";
+import { hashText, type TrEntry } from "@/lib/translate/content";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -48,6 +49,25 @@ export default async function SharedTaskPage({
     const supabase = await createClient();
     const { data } = await supabase.rpc("get_shared_task", { p_token: token });
     task = (Array.isArray(data) ? data[0] : null) as Shared | null;
+    // AI-перевод (миграция 0012): только если оригинал не менялся после перевода
+    if (task && i18n.lang !== "ru") {
+      const { data: tr } = await supabase.rpc("get_shared_task_translation", {
+        p_token: token,
+        p_lang: i18n.lang,
+      });
+      const pick = (e: TrEntry | null | undefined, s: string) =>
+        e && e.h === hashText(s) ? e.t : s;
+      if (tr) {
+        const m = tr as Record<string, TrEntry | null>;
+        task = {
+          ...task,
+          name: pick(m.name, task.name),
+          description: pick(m.description, task.description),
+          phase_name: pick(m.phase, task.phase_name),
+          project_name: pick(m.project, task.project_name),
+        };
+      }
+    }
   }
 
   return (
