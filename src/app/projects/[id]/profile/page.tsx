@@ -43,6 +43,7 @@ export default async function ProfilePage({
     cycleProbe,
     mvpProbe,
     meRes,
+    notesProbe,
   ] = await Promise.all([
     supabase
       .from("product_profiles")
@@ -86,6 +87,8 @@ export default async function ProfilePage({
       .eq("project_id", id)
       .eq("user_id", auth.user.id)
       .maybeSingle(),
+    // материалы и заметки (миграция 0013)
+    supabase.from("product_profiles").select("notes").limit(1),
   ]);
   const readOnly = meRes.data?.role === "viewer";
   const translations = await loadPageTranslation(supabase, id, await getLang());
@@ -126,6 +129,7 @@ export default async function ProfilePage({
       needsEconomics={needsEconomics}
       needsCycle={!missingTables && !!cycleProbe.error}
       needsTemplate={!missingTables && !!mvpProbe.error}
+      needsMaterials={!missingTables && !!notesProbe.error}
       readOnly={readOnly}
       stepTasks={(steps.data ?? []) as StepTask[]}
       initialTasks={(tasksRes.data ?? []) as LinkedTask[]}

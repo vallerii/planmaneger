@@ -407,6 +407,25 @@ function ProductCard({
         <RemoveBtn onClick={() => ctx.askRemove(p.id)} />
       </div>
 
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <div>
+          <Label>{t("Описание продукта")}</Label>
+          <AutoText
+            value={d.description ?? ""}
+            onSave={(v) => set({ description: v })}
+            placeholder={t("Что получает клиент, из чего состоит, как устроено")}
+          />
+        </div>
+        <div>
+          <Label>{t("Чем отличается от предложений на рынке")}</Label>
+          <AutoText
+            value={d.difference ?? ""}
+            onSave={(v) => set({ difference: v })}
+            placeholder={t("Почему выберут нас, а не конкурентов или «сделать самим»")}
+          />
+        </div>
+      </div>
+
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         <div>
           <Label>{u.subscription ? t("Цена в месяц") : t("Цена")}</Label>

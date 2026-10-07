@@ -27,6 +27,10 @@ export type ProductData = {
   churn?: number; // % в месяц
   start_active?: number;
   mix?: number; // доля новых продаж, %
+  /** что это за продукт / тариф */
+  description?: string;
+  /** чем отличается от предложений на рынке */
+  difference?: string;
 };
 
 export const CURRENCIES: { value: Currency; label: string }[] = [

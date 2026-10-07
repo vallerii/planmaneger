@@ -10,11 +10,19 @@ export default function RichEditor({
   initial,
   onChange,
   readOnly = false,
+  placeholder,
+  headings = false,
+  className = "",
 }: {
   initial: string;
   onChange: (html: string) => void;
   /** только просмотр: без панели инструментов и редактирования */
   readOnly?: boolean;
+  placeholder?: string;
+  /** кнопки заголовков H2 / H3 (заметки) */
+  headings?: boolean;
+  /** доп. классы области текста (например, высота) */
+  className?: string;
 }) {
   const t = useT();
   const editor = useEditor({
@@ -32,11 +40,11 @@ export default function RichEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({
-        placeholder: t("Добавьте описание, заметки, чек-листы, ссылки…"),
+        placeholder: placeholder ?? t("Добавьте описание, заметки, чек-листы, ссылки…"),
       }),
     ],
     content: initial || "",
-    editorProps: { attributes: { class: "rich" } },
+    editorProps: { attributes: { class: `rich ${className}` } },
     onUpdate: ({ editor }) => onChange(editor.isEmpty ? "" : editor.getHTML()),
   });
 
@@ -47,6 +55,8 @@ export default function RichEditor({
         ? {
             bold: editor.isActive("bold"),
             italic: editor.isActive("italic"),
+            h2: editor.isActive("heading", { level: 2 }),
+            h3: editor.isActive("heading", { level: 3 }),
             bullet: editor.isActive("bulletList"),
             ordered: editor.isActive("orderedList"),
             task: editor.isActive("taskList"),
@@ -95,6 +105,24 @@ export default function RichEditor({
         className="flex flex-wrap items-center gap-[3px] border-b border-line bg-[#faf9f6] p-[7px]"
         onMouseDown={(e) => e.preventDefault()}
       >
+        {headings && (
+          <>
+            <button
+              className={tool(active?.h2)}
+              title={t("Заголовок")}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            >
+              H2
+            </button>
+            <button
+              className={tool(active?.h3)}
+              title={t("Подзаголовок")}
+              onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+            >
+              H3
+            </button>
+          </>
+        )}
         <button
           className={tool(active?.bold)}
           title={t("Жирный")}

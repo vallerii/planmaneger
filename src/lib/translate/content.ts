@@ -43,6 +43,7 @@ export const PROFILE_FIELDS = [
   "gtm",
   "positioning",
   "market_size",
+  "notes",
 ] as const;
 
 /** Поля, которые не переводим никогда: ссылки, контакты, имена, даты. */
@@ -56,6 +57,10 @@ const SKIP_KEYS = new Set([
   "deadline",
   "measured_at",
   "launch_date",
+  // документы (материалы): путь в Storage и тип файла
+  "path",
+  "mime",
+  "file_name",
 ]);
 
 /**

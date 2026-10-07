@@ -186,7 +186,7 @@ function Funnel({ prospects }: { prospects: ProfileItem[] }) {
   );
 }
 
-function LinkOut({ url }: { url?: string }) {
+export function LinkOut({ url }: { url?: string }) {
   const t = useT();
   if (!url?.trim()) return null;
   const href = /^https?:\/\//i.test(url.trim())

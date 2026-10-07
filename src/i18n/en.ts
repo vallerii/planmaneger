@@ -1723,4 +1723,70 @@ export const en: Record<string, string> = {
     "Some texts couldn't be translated — please try again.",
   "Сессия истекла — обновите страницу и войдите снова.":
     "Your session has expired — reload the page and sign in again.",
+  "Есть изменения…":
+    "Unsaved changes…",
+  "Не удалось сохранить":
+    "Couldn't save",
+  "Вы можете смотреть заметки, но не менять их":
+    "You can view the notes but not edit them",
+  "Для материалов и заметок запустите {file} в Supabase → SQL Editor, затем обновите страницу.":
+    "For materials and notes, run {file} in Supabase → SQL Editor, then reload the page.",
+  "Заметок пока нет.":
+    "No notes yet.",
+  "Заметки по проекту: договорённости, идеи, контекст, протоколы встреч…":
+    "Project notes: agreements, ideas, context, meeting minutes…",
+  "Заметки":
+    "Notes",
+  "Заголовок":
+    "Heading",
+  "Подзаголовок":
+    "Subheading",
+  "Описание продукта":
+    "Product description",
+  "Что получает клиент, из чего состоит, как устроено":
+    "What the client gets, what it includes, how it works",
+  "Чем отличается от предложений на рынке":
+    "How it differs from market offerings",
+  "Почему выберут нас, а не конкурентов или «сделать самим»":
+    "Why clients would choose us over competitors or doing it themselves",
+  "Ссылки":
+    "Links",
+  "Figma, сайт, репозиторий, аналитика, таблицы — всё, что не хочется потерять.":
+    "Figma, website, repository, analytics, spreadsheets — everything you don't want to lose.",
+  "Ссылок пока нет.":
+    "No links yet.",
+  "Ссылка":
+    "Link",
+  "+ Добавить ссылку":
+    "+ Add link",
+  "Пароли здесь не храните: добавьте ссылку на запись в менеджере паролей (1Password, Bitwarden…).":
+    "Don't store passwords here: add a link to the entry in your password manager (1Password, Bitwarden…).",
+  "Документы":
+    "Documents",
+  "Документ":
+    "Document",
+  "Договоры, презентации, исследования, макеты. До {n} МБ на файл.":
+    "Contracts, presentations, research, mockups. Up to {n} MB per file.",
+  "Макеты в Figma":
+    "Figma mockups",
+  "«{name}» больше {n} МБ — не загружен.":
+    "“{name}” is larger than {n} MB — not uploaded.",
+  "Не удалось загрузить «{name}»: {msg}":
+    "Couldn't upload “{name}”: {msg}",
+  "Не удалось открыть файл:":
+    "Couldn't open the file:",
+  "Документов пока нет.":
+    "No documents yet.",
+  "Открыть":
+    "Open",
+  "Скачать":
+    "Download",
+  "Загружаю «{name}»…":
+    "Uploading “{name}”…",
+  "+ Загрузить документ (или перетащите файлы сюда)":
+    "+ Upload document (or drag files here)",
+  "Материалы":
+    "Materials",
+  "Сохранено":
+    "Saved",
 };

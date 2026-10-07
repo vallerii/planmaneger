@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useT } from "@/i18n/client";
 
-/** Переключатель «Доска | Профиль продукта» в шапке проекта. */
+/** Переключатель «Доска | Профиль продукта | Заметки» в шапке проекта. */
 export default function ProjectNav({
   projectId,
   active,
 }: {
   projectId: string;
-  active: "board" | "profile";
+  active: "board" | "profile" | "notes";
 }) {
   const t = useT();
   const tab = (on: boolean) =>
@@ -28,6 +28,12 @@ export default function ProjectNav({
         className={tab(active === "profile")}
       >
         {t("Профиль продукта")}
+      </Link>
+      <Link
+        href={`/projects/${projectId}/notes`}
+        className={tab(active === "notes")}
+      >
+        {t("Заметки")}
       </Link>
     </nav>
   );

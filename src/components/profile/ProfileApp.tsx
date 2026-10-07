@@ -35,6 +35,7 @@ import Market from "./Market";
 import EconomicsTab from "./Economics";
 import GtmTab from "./Gtm";
 import MetricsTab from "./Metrics";
+import Materials, { FILES_BUCKET } from "./Materials";
 import type { Economics } from "@/lib/economics";
 
 /** Вкладки в порядке фаз продуктового цикла. */
@@ -49,6 +50,7 @@ const TABS: { id: Tab; label: string; phase?: string }[] = [
   { id: "metrics", label: "Метрики", phase: "MVP · Launch · Measure" },
   { id: "gtm", label: "Выход на рынок", phase: "Launch · Growth" },
   { id: "decisions", label: "Решения", phase: "Validation · Measure" },
+  { id: "materials", label: "Материалы" },
 ];
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -77,7 +79,7 @@ export type ProfileCtx = {
     data?: ProfileItem["data"],
     title?: string,
     opts?: { focus?: boolean },
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   updateItem: (id: string, patch: ItemPatch) => void;
   askRemove: (id: string) => void;
   markReviewed: (sec: SectionId) => void;
@@ -106,6 +108,8 @@ export type ProfileCtx = {
   stepTasks: StepTask[];
   /** отправить закрытые задачи этих шагов на пересмотр; вернёт, сколько задач */
   reviseSteps: (steps: ProfileStep[]) => Promise<number>;
+  /** миграция 0013: ссылки, документы, заметки */
+  canMaterials: boolean;
 };
 
 /** Задача фазы 0, связанная с вкладкой профиля. */
@@ -130,6 +134,7 @@ export default function ProfileApp({
   needsEconomics = false,
   needsCycle = false,
   needsTemplate = false,
+  needsMaterials = false,
   readOnly: isViewer = false,
   initialTasks = [],
   phases = [],
@@ -147,6 +152,7 @@ export default function ProfileApp({
   needsEconomics?: boolean;
   needsCycle?: boolean;
   needsTemplate?: boolean;
+  needsMaterials?: boolean;
   /** клиент / партнёр: только просмотр */
   readOnly?: boolean;
   initialTasks?: LinkedTask[];
@@ -321,10 +327,13 @@ export default function ProfileApp({
         .select()
         .single();
       setPending((n) => n - 1);
-      if (error) return toast(t("Ошибка:") + " " + error.message);
+      if (error) {
+        toast(t("Ошибка:") + " " + error.message);
+        return false;
+      }
       setItems((xs) => [...xs, row as ProfileItem]);
       reloadHistory();
-      if (opts.focus === false) return;
+      if (opts.focus === false) return true;
       // фокус на новом элементе
       setTimeout(() => {
         const el = document.querySelector<HTMLTextAreaElement>(
@@ -333,6 +342,7 @@ export default function ProfileApp({
         el?.focus();
         el?.scrollIntoView({ block: "center", behavior: "smooth" });
       }, 60);
+      return true;
     },
     [supabase, project.id, toast, reloadHistory, setItems, t],
   );
@@ -519,6 +529,7 @@ export default function ProfileApp({
   ]);
 
   async function removeItem(id: string) {
+    const removed = itemsRef.current.find((i) => i.id === id);
     setItems((xs) => xs.filter((i) => i.id !== id));
     setTasks((xs) =>
       xs.map((t) =>
@@ -531,6 +542,9 @@ export default function ProfileApp({
       supabase.from("profile_items").delete().eq("id", id),
     );
     if (ok) {
+      // документ: удалить и сам файл из хранилища
+      if (removed?.kind === "file" && removed.data.path)
+        supabase.storage.from(FILES_BUCKET).remove([removed.data.path]);
       reloadHistory();
       syncSteps();
     }
@@ -728,6 +742,7 @@ export default function ProfileApp({
     canMvp: !needsTemplate,
     stepTasks,
     reviseSteps,
+    canMaterials: !needsMaterials && !missingTables,
   };
 
   const removing = items.find((i) => i.id === removeId);
@@ -846,6 +861,7 @@ export default function ProfileApp({
         {tab === "metrics" && <MetricsTab ctx={ctx} />}
         {tab === "gtm" && <GtmTab ctx={ctx} />}
         {tab === "decisions" && <Decisions ctx={ctx} />}
+        {tab === "materials" && <Materials ctx={ctx} />}
         </fieldset>
       </main>
 

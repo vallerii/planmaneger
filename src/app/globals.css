@@ -27,6 +27,9 @@ button { cursor: pointer; }
 .rich { min-height: 190px; padding: 14px; outline: none; line-height: 1.6; }
 .rich p { margin: 0.35em 0; }
 .rich a { color: #165dca; text-decoration: underline; }
+.rich h2 { font-size: 1.35em; font-weight: 800; letter-spacing: -0.01em; margin: 0.9em 0 0.3em; }
+.rich h3 { font-size: 1.12em; font-weight: 800; margin: 0.8em 0 0.25em; }
+.rich > :first-child { margin-top: 0; }
 .rich ul, .rich ol { padding-left: 24px; }
 .rich ul { list-style: disc; }
 .rich ol { list-style: decimal; }

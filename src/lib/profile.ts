@@ -12,7 +12,11 @@ export type ItemKind =
   | "product"
   | "metric"
   | "channel"
-  | "journey";
+  | "journey"
+  /** материалы: ссылка (название + url) */
+  | "link"
+  /** материалы: документ в Storage (data.path, data.size, data.mime) */
+  | "file";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type ProfileItem = {
@@ -76,6 +80,8 @@ export type ProductProfile = {
   gtm: Gtm;
   mvp: Mvp;
   market_notes: string;
+  /** заметки по проекту, HTML (миграция 0013) */
+  notes: string;
   economics: Economics;
   positioning: Positioning;
   thesis: Thesis;
@@ -105,6 +111,7 @@ export const emptyProfile = (projectId: string): ProductProfile => ({
   gtm: {},
   mvp: {},
   market_notes: "",
+  notes: "",
   economics: {},
   positioning: {},
   thesis: {},
@@ -183,6 +190,8 @@ export const STATUS: Record<ItemKind, Opt[]> = {
     { value: "failed", label: "Не работает", tone: "red" },
   ],
   journey: [{ value: "stage", label: "Этап", tone: "gray" }],
+  link: [{ value: "saved", label: "Сохранено", tone: "gray" }],
+  file: [{ value: "saved", label: "Сохранено", tone: "gray" }],
 };
 
 export const statusOf = (kind: ItemKind, value: string) =>
@@ -218,6 +227,8 @@ export const KIND_LABEL: Record<ItemKind, string> = {
   metric: "Метрика",
   channel: "Канал",
   journey: "Этап пути клиента",
+  link: "Ссылка",
+  file: "Документ",
 };
 
 export const DEFAULT_STATUS: Record<ItemKind, string> = {
@@ -232,6 +243,8 @@ export const DEFAULT_STATUS: Record<ItemKind, string> = {
   metric: "active",
   channel: "idea",
   journey: "stage",
+  link: "saved",
+  file: "saved",
 };
 
 // ---------- разделы и свежесть ----------
@@ -245,7 +258,8 @@ export type Tab =
   | "mvp"
   | "metrics"
   | "gtm"
-  | "decisions";
+  | "decisions"
+  | "materials";
 export type SectionId =
   | "mission"
   | "positioning"

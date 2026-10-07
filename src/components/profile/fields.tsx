@@ -5,7 +5,11 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Select, TrashIcon, trashBtnCls } from "../ui";
 import { TONE, freshnessLabel, type Freshness, type Tone } from "@/lib/profile";
 
-/** Текстовое поле: изменения сразу уходят в состояние профиля, в базу — по кнопке «Сохранить». */
+/**
+ * Текстовое поле: изменения сразу уходят в состояние профиля, в базу — по кнопке «Сохранить».
+ * single — без переносов строки (Enter завершает ввод), но длинный текст виден целиком:
+ * поле растёт в высоту.
+ */
 export function AutoText({
   value,
   onSave,
@@ -36,10 +40,25 @@ export function AutoText({
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || single) return;
+    if (!el) return;
     el.style.height = "auto";
     el.style.height = el.scrollHeight + 2 + "px";
-  }, [v, single]);
+  }, [v]);
+
+  // ширина поля меняется (окно, соседние колонки) — пересчитать высоту
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let w = el.offsetWidth;
+    const ro = new ResizeObserver(() => {
+      if (el.offsetWidth === w) return;
+      w = el.offsetWidth;
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + 2 + "px";
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const flush = (val: string) => {
     if (timer.current) clearTimeout(timer.current);
@@ -77,9 +96,7 @@ export function AutoText({
           e.currentTarget.blur();
         }
       }}
-      className={`w-full resize-none rounded-[10px] border border-transparent bg-[#f5f4ef] px-3 py-2 leading-relaxed outline-none transition placeholder:text-[#aaa] hover:border-line focus:border-ink/30 focus:bg-white ${
-        single ? "overflow-hidden whitespace-nowrap" : ""
-      } ${className}`}
+      className={`w-full resize-none overflow-hidden rounded-[10px] border border-transparent bg-[#f5f4ef] px-3 py-2 leading-relaxed break-words outline-none transition placeholder:text-[#aaa] hover:border-line focus:border-ink/30 focus:bg-white ${className}`}
     />
   );
 }

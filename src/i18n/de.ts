@@ -1723,4 +1723,70 @@ export const de: Record<string, string> = {
     "Einige Texte konnten nicht übersetzt werden – bitte versuchen Sie es erneut.",
   "Сессия истекла — обновите страницу и войдите снова.":
     "Ihre Sitzung ist abgelaufen – laden Sie die Seite neu und melden Sie sich erneut an.",
+  "Есть изменения…":
+    "Ungespeicherte Änderungen…",
+  "Не удалось сохранить":
+    "Speichern fehlgeschlagen",
+  "Вы можете смотреть заметки, но не менять их":
+    "Sie können die Notizen ansehen, aber nicht bearbeiten",
+  "Для материалов и заметок запустите {file} в Supabase → SQL Editor, затем обновите страницу.":
+    "Für Materialien und Notizen führen Sie {file} in Supabase → SQL Editor aus und laden Sie die Seite neu.",
+  "Заметок пока нет.":
+    "Noch keine Notizen.",
+  "Заметки по проекту: договорённости, идеи, контекст, протоколы встреч…":
+    "Projektnotizen: Absprachen, Ideen, Kontext, Besprechungsprotokolle…",
+  "Заметки":
+    "Notizen",
+  "Заголовок":
+    "Überschrift",
+  "Подзаголовок":
+    "Unterüberschrift",
+  "Описание продукта":
+    "Produktbeschreibung",
+  "Что получает клиент, из чего состоит, как устроено":
+    "Was der Kunde bekommt, woraus es besteht, wie es funktioniert",
+  "Чем отличается от предложений на рынке":
+    "Was es von Marktangeboten unterscheidet",
+  "Почему выберут нас, а не конкурентов или «сделать самим»":
+    "Warum Kunden uns statt der Konkurrenz oder einer Eigenlösung wählen",
+  "Ссылки":
+    "Links",
+  "Figma, сайт, репозиторий, аналитика, таблицы — всё, что не хочется потерять.":
+    "Figma, Website, Repository, Analytics, Tabellen — alles, was nicht verloren gehen soll.",
+  "Ссылок пока нет.":
+    "Noch keine Links.",
+  "Ссылка":
+    "Link",
+  "+ Добавить ссылку":
+    "+ Link hinzufügen",
+  "Пароли здесь не храните: добавьте ссылку на запись в менеджере паролей (1Password, Bitwarden…).":
+    "Speichern Sie hier keine Passwörter: Fügen Sie einen Link zum Eintrag im Passwortmanager hinzu (1Password, Bitwarden…).",
+  "Документы":
+    "Dokumente",
+  "Документ":
+    "Dokument",
+  "Договоры, презентации, исследования, макеты. До {n} МБ на файл.":
+    "Verträge, Präsentationen, Recherchen, Entwürfe. Bis zu {n} MB pro Datei.",
+  "Макеты в Figma":
+    "Figma-Entwürfe",
+  "«{name}» больше {n} МБ — не загружен.":
+    "„{name}“ ist größer als {n} MB — nicht hochgeladen.",
+  "Не удалось загрузить «{name}»: {msg}":
+    "„{name}“ konnte nicht hochgeladen werden: {msg}",
+  "Не удалось открыть файл:":
+    "Datei konnte nicht geöffnet werden:",
+  "Документов пока нет.":
+    "Noch keine Dokumente.",
+  "Открыть":
+    "Öffnen",
+  "Скачать":
+    "Herunterladen",
+  "Загружаю «{name}»…":
+    "„{name}“ wird hochgeladen…",
+  "+ Загрузить документ (или перетащите файлы сюда)":
+    "+ Dokument hochladen (oder Dateien hierher ziehen)",
+  "Материалы":
+    "Materialien",
+  "Сохранено":
+    "Gespeichert",
 };
