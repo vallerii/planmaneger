@@ -1789,4 +1789,48 @@ export const de: Record<string, string> = {
     "Materialien",
   "Сохранено":
     "Gespeichert",
+  "Подсказка":
+    "Hinweis",
+  "Сколько новых клиентов или продаж в месяц в первом квартале — всего по всем продуктам. Между продуктами делится по долям продаж.":
+    "Wie viele neue Kunden oder Verkäufe pro Monat im ersten Quartal, über alle Produkte. Wird nach Verkaufsanteil auf die Produkte verteilt.",
+  "Расходы, которые не зависят от числа клиентов: зарплаты, сервисы, офис, бухгалтерия — в первом квартале.":
+    "Kosten, die nicht von der Kundenzahl abhängen: Gehälter, Tools, Büro, Buchhaltung — im ersten Quartal.",
+  "На сколько % новые продажи и постоянные расходы квартала больше, чем в предыдущем. 15% — каждый квартал продаём на 15% больше.":
+    "Um wie viel % Neuverkäufe und Fixkosten gegenüber dem Vorquartal wachsen. 15 % heißt: jedes Quartal 15 % mehr Verkäufe.",
+  "Сколько платит клиент: за месяц — для подписки, за одну покупку — для разовой продажи. Если цены ещё нет — возьмите ту, которую участники экспериментов готовы были платить.":
+    "Was der Kunde zahlt: pro Monat beim Abo, pro Kauf beim Einmalverkauf. Noch kein Preis? Nehmen Sie, was Teilnehmer der Experimente zu zahlen bereit waren.",
+  "Сколько часов команды уходит на одного клиента (для подписки — в месяц): онбординг, поддержка, ручная работа.":
+    "Teamstunden pro Kunde (beim Abo pro Monat): Onboarding, Support, manuelle Arbeit.",
+  "Во сколько обходится час работы команды: зарплаты с налогами ÷ рабочие часы. Себестоимость = часы × стоимость часа + прочие затраты.":
+    "Was eine Teamstunde kostet: Gehälter inkl. Abgaben ÷ Arbeitsstunden. Kosten pro Verkauf = Stunden × Stundensatz + sonstige Kosten.",
+  "Затраты, которые растут с каждым клиентом: хостинг, комиссия платёжной системы, материалы, сервисы на клиента (для подписки — в месяц).":
+    "Kosten, die mit jedem Kunden steigen: Hosting, Zahlungsgebühren, Material, Tools pro Kunde (beim Abo pro Monat).",
+  "Сколько стоит привлечь одного платящего клиента: реклама, время на продажи, партнёрам ÷ число новых клиентов. Например, 300 € на рекламу и 2 оплаты — CAC 150 €.":
+    "Was es kostet, einen zahlenden Kunden zu gewinnen: Werbung, Vertriebszeit, Partnerprovisionen ÷ Zahl neuer Kunden. Z. B. 300 € Werbung und 2 Zahlungen — CAC 150 €.",
+  "Какой % клиентов отказывается от подписки за месяц. 5% в месяц — клиент в среднем остаётся 20 месяцев.":
+    "Wie viel % der Kunden das Abo pro Monat kündigen. 5 % pro Monat heißt: Ein Kunde bleibt im Schnitt 20 Monate.",
+  "Сколько платящих клиентов по этой подписке уже есть в начале прогноза. Если только начинаете — 0.":
+    "Wie viele zahlende Kunden dieses Abo zu Beginn der Prognose schon hat. Gerade erst gestartet? 0.",
+  "Какая доля всех новых продаж приходится на этот продукт. Если сумма долей не 100%, они приводятся к 100% автоматически.":
+    "Welcher Anteil aller Neuverkäufe auf dieses Produkt entfällt. Ergeben die Anteile nicht 100 %, werden sie automatisch auf 100 % skaliert.",
+  "Часы на клиента × стоимость часа + прочие затраты.":
+    "Stunden pro Kunde × Stundensatz + sonstige Kosten.",
+  "Цена − себестоимость: сколько остаётся с продажи на привлечение, постоянные расходы и прибыль.":
+    "Preis − Kosten pro Verkauf: was pro Verkauf für Akquise, Fixkosten und Gewinn bleibt.",
+  "Вклад ÷ цена: какая доля цены остаётся после себестоимости.":
+    "Deckungsbeitrag ÷ Preis: welcher Anteil des Preises nach den Kosten pro Verkauf bleibt.",
+  "CAC ÷ вклад в месяц: за сколько месяцев клиент возвращает деньги, потраченные на его привлечение. Ориентир — до 12 месяцев.":
+    "CAC ÷ monatlicher Deckungsbeitrag: nach wie vielen Monaten ein Kunde seine Akquisekosten zurückbringt. Richtwert: höchstens 12 Monate.",
+  "Вклад в месяц ÷ отток: сколько клиент приносит за всё время. LTV / CAC от 3 — распространённый ориентир здоровой модели.":
+    "Monatlicher Deckungsbeitrag ÷ Churn: was ein Kunde über die gesamte Laufzeit bringt. LTV / CAC ab 3 gilt als gängiger Richtwert für ein gesundes Modell.",
+  "Вклад − CAC: сколько зарабатываем с одной продажи после затрат на привлечение.":
+    "Deckungsbeitrag − CAC: was ein Verkauf nach Akquisekosten einbringt.",
+  "Управлять →":
+    "Verwalten →",
+  "Профиль экспортирован":
+    "Profil exportiert",
+  "Скачать профиль продукта в JSON":
+    "Produktprofil als JSON herunterladen",
+  "Участники":
+    "Mitglieder",
 };

@@ -1789,4 +1789,48 @@ export const en: Record<string, string> = {
     "Materials",
   "Сохранено":
     "Saved",
+  "Подсказка":
+    "Hint",
+  "Сколько новых клиентов или продаж в месяц в первом квартале — всего по всем продуктам. Между продуктами делится по долям продаж.":
+    "How many new customers or sales per month in the first quarter, across all products. Split between products by sales share.",
+  "Расходы, которые не зависят от числа клиентов: зарплаты, сервисы, офис, бухгалтерия — в первом квартале.":
+    "Costs that don't depend on the number of customers: salaries, tools, office, accounting — in the first quarter.",
+  "На сколько % новые продажи и постоянные расходы квартала больше, чем в предыдущем. 15% — каждый квартал продаём на 15% больше.":
+    "By what % new sales and fixed costs grow compared with the previous quarter. 15% means each quarter you sell 15% more.",
+  "Сколько платит клиент: за месяц — для подписки, за одну покупку — для разовой продажи. Если цены ещё нет — возьмите ту, которую участники экспериментов готовы были платить.":
+    "What the customer pays: per month for a subscription, per purchase for a one-time sale. No price yet? Use what experiment participants were willing to pay.",
+  "Сколько часов команды уходит на одного клиента (для подписки — в месяц): онбординг, поддержка, ручная работа.":
+    "Team hours spent on one customer (per month for a subscription): onboarding, support, manual work.",
+  "Во сколько обходится час работы команды: зарплаты с налогами ÷ рабочие часы. Себестоимость = часы × стоимость часа + прочие затраты.":
+    "What an hour of team work costs: salaries incl. taxes ÷ working hours. Cost of sale = hours × hourly cost + other costs.",
+  "Затраты, которые растут с каждым клиентом: хостинг, комиссия платёжной системы, материалы, сервисы на клиента (для подписки — в месяц).":
+    "Costs that grow with every customer: hosting, payment fees, materials, per-customer tools (per month for a subscription).",
+  "Сколько стоит привлечь одного платящего клиента: реклама, время на продажи, партнёрам ÷ число новых клиентов. Например, 300 € на рекламу и 2 оплаты — CAC 150 €.":
+    "What it costs to acquire one paying customer: ads, sales time, partner fees ÷ number of new customers. E.g. €300 on ads and 2 payments — CAC €150.",
+  "Какой % клиентов отказывается от подписки за месяц. 5% в месяц — клиент в среднем остаётся 20 месяцев.":
+    "What % of customers cancel the subscription each month. 5% a month means a customer stays 20 months on average.",
+  "Сколько платящих клиентов по этой подписке уже есть в начале прогноза. Если только начинаете — 0.":
+    "How many paying customers this subscription already has at the start of the forecast. Just starting? Enter 0.",
+  "Какая доля всех новых продаж приходится на этот продукт. Если сумма долей не 100%, они приводятся к 100% автоматически.":
+    "What share of all new sales goes to this product. If the shares don't add up to 100%, they are scaled to 100% automatically.",
+  "Часы на клиента × стоимость часа + прочие затраты.":
+    "Hours per customer × hourly cost + other costs.",
+  "Цена − себестоимость: сколько остаётся с продажи на привлечение, постоянные расходы и прибыль.":
+    "Price − cost of sale: what's left from a sale to cover acquisition, fixed costs and profit.",
+  "Вклад ÷ цена: какая доля цены остаётся после себестоимости.":
+    "Contribution ÷ price: what share of the price is left after the cost of sale.",
+  "CAC ÷ вклад в месяц: за сколько месяцев клиент возвращает деньги, потраченные на его привлечение. Ориентир — до 12 месяцев.":
+    "CAC ÷ monthly contribution: how many months it takes a customer to pay back what you spent to acquire them. Aim for 12 months or less.",
+  "Вклад в месяц ÷ отток: сколько клиент приносит за всё время. LTV / CAC от 3 — распространённый ориентир здоровой модели.":
+    "Monthly contribution ÷ churn: what a customer brings over their whole lifetime. LTV / CAC of 3 or more is a common benchmark for a healthy model.",
+  "Вклад − CAC: сколько зарабатываем с одной продажи после затрат на привлечение.":
+    "Contribution − CAC: what you earn from one sale after acquisition costs.",
+  "Управлять →":
+    "Manage →",
+  "Профиль экспортирован":
+    "Profile exported",
+  "Скачать профиль продукта в JSON":
+    "Download the product profile as JSON",
+  "Участники":
+    "Members",
 };

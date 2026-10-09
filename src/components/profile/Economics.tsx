@@ -21,6 +21,7 @@ import {
   AddBtn,
   AutoText,
   Empty,
+  InfoTip,
   Label,
   NumField,
   RemoveBtn,
@@ -157,7 +158,9 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
             />
           </div>
           <div>
-            <Label>{t("Новых продаж в месяц")}</Label>
+            <Label info={t("Сколько новых клиентов или продаж в месяц в первом квартале — всего по всем продуктам. Между продуктами делится по долям продаж.")}>
+              {t("Новых продаж в месяц")}
+            </Label>
             <NumField
               value={e.base_sales}
               onSave={(v) => ctx.patchEconomics({ base_sales: v })}
@@ -165,7 +168,9 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
             />
           </div>
           <div>
-            <Label>{t("Постоянные расходы в месяц")}</Label>
+            <Label info={t("Расходы, которые не зависят от числа клиентов: зарплаты, сервисы, офис, бухгалтерия — в первом квартале.")}>
+              {t("Постоянные расходы в месяц")}
+            </Label>
             <NumField
               value={e.base_fixed}
               onSave={(v) => ctx.patchEconomics({ base_fixed: v })}
@@ -176,8 +181,11 @@ export default function EconomicsTab({ ctx }: { ctx: ProfileCtx }) {
 
         <div className="mt-5">
           <div className="mb-2 flex flex-wrap items-baseline gap-2">
-            <span className="text-sm font-extrabold">
+            <span className="flex items-center gap-1.5 text-sm font-extrabold">
               {t("Рост к предыдущему кварталу")}
+              <InfoTip
+                text={t("На сколько % новые продажи и постоянные расходы квартала больше, чем в предыдущем. 15% — каждый квартал продаём на 15% больше.")}
+              />
             </span>
             <span className="text-xs text-muted">{t("Q1 — база из полей выше")}</span>
             {quarters.length > 1 && (
@@ -428,7 +436,9 @@ function ProductCard({
 
       <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
         <div>
-          <Label>{u.subscription ? t("Цена в месяц") : t("Цена")}</Label>
+          <Label info={t("Сколько платит клиент: за месяц — для подписки, за одну покупку — для разовой продажи. Если цены ещё нет — возьмите ту, которую участники экспериментов готовы были платить.")}>
+            {u.subscription ? t("Цена в месяц") : t("Цена")}
+          </Label>
           <NumField
             value={d.price}
             onSave={(v) => set({ price: v })}
@@ -436,7 +446,7 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>
+          <Label info={t("Сколько часов команды уходит на одного клиента (для подписки — в месяц): онбординг, поддержка, ручная работа.")}>
             {u.subscription ? t("Часов на клиента / мес.") : t("Часов на клиента")}
           </Label>
           <NumField
@@ -446,7 +456,9 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>{t("Стоимость часа команды")}</Label>
+          <Label info={t("Во сколько обходится час работы команды: зарплаты с налогами ÷ рабочие часы. Себестоимость = часы × стоимость часа + прочие затраты.")}>
+            {t("Стоимость часа команды")}
+          </Label>
           <NumField
             value={d.hour_cost}
             onSave={(v) => set({ hour_cost: v })}
@@ -454,7 +466,9 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>{t("Прочие затраты на продажу")}</Label>
+          <Label info={t("Затраты, которые растут с каждым клиентом: хостинг, комиссия платёжной системы, материалы, сервисы на клиента (для подписки — в месяц).")}>
+            {t("Прочие затраты на продажу")}
+          </Label>
           <NumField
             value={d.variable}
             onSave={(v) => set({ variable: v })}
@@ -462,7 +476,9 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>{t("CAC (привлечение)")}</Label>
+          <Label info={t("Сколько стоит привлечь одного платящего клиента: реклама, время на продажи, партнёрам ÷ число новых клиентов. Например, 300 € на рекламу и 2 оплаты — CAC 150 €.")}>
+            {t("CAC (привлечение)")}
+          </Label>
           <NumField
             value={d.cac}
             onSave={(v) => set({ cac: v })}
@@ -470,7 +486,9 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>{t("Отток в месяц")}</Label>
+          <Label info={t("Какой % клиентов отказывается от подписки за месяц. 5% в месяц — клиент в среднем остаётся 20 месяцев.")}>
+            {t("Отток в месяц")}
+          </Label>
           <NumField
             value={d.churn}
             onSave={(v) => set({ churn: v })}
@@ -479,7 +497,9 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label>{t("Активных клиентов на старте")}</Label>
+          <Label info={t("Сколько платящих клиентов по этой подписке уже есть в начале прогноза. Если только начинаете — 0.")}>
+            {t("Активных клиентов на старте")}
+          </Label>
           <NumField
             value={d.start_active}
             onSave={(v) => set({ start_active: v })}
@@ -488,7 +508,10 @@ function ProductCard({
           />
         </div>
         <div>
-          <Label hint={mixTotal > 0 && !dropped ? `≈ ${share}%` : undefined}>
+          <Label
+            hint={mixTotal > 0 && !dropped ? `≈ ${share}%` : undefined}
+            info={t("Какая доля всех новых продаж приходится на этот продукт. Если сумма долей не 100%, они приводятся к 100% автоматически.")}
+          >
             {t("Доля продаж")}
           </Label>
           <NumField value={d.mix} onSave={(v) => set({ mix: v })} suffix="%" />
@@ -496,14 +519,20 @@ function ProductCard({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 rounded-[11px] bg-[#faf9f6] p-3 md:grid-cols-5">
-        <Derived label={t("Себестоимость продажи")} value={m(u.delivery)} />
+        <Derived
+          label={t("Себестоимость продажи")}
+          info={t("Часы на клиента × стоимость часа + прочие затраты.")}
+          value={m(u.delivery)}
+        />
         <Derived
           label={t("Вклад до CAC")}
+          info={t("Цена − себестоимость: сколько остаётся с продажи на привлечение, постоянные расходы и прибыль.")}
           value={m(u.contribution)}
           bad={u.contribution < 0}
         />
         <Derived
           label={t("Маржа до CAC")}
+          info={t("Вклад ÷ цена: какая доля цены остаётся после себестоимости.")}
           value={`${u.margin.toFixed(0)}%`}
           bad={u.margin < 0}
         />
@@ -511,6 +540,7 @@ function ProductCard({
           <>
             <Derived
               label={t("CAC окупается за")}
+              info={t("CAC ÷ вклад в месяц: за сколько месяцев клиент возвращает деньги, потраченные на его привлечение. Ориентир — до 12 месяцев.")}
               value={
                 u.paybackMonths !== null
                   ? `${u.paybackMonths.toFixed(1)} ${t("мес.")}`
@@ -520,6 +550,7 @@ function ProductCard({
             />
             <Derived
               label={t("LTV (вклад за жизнь)")}
+              info={t("Вклад в месяц ÷ отток: сколько клиент приносит за всё время. LTV / CAC от 3 — распространённый ориентир здоровой модели.")}
               value={u.ltv !== null ? m(u.ltv) : "—"}
               sub={
                 u.ltvCac !== null
@@ -532,6 +563,7 @@ function ProductCard({
         ) : (
           <Derived
             label={t("Прибыль с продажи после CAC")}
+            info={t("Вклад − CAC: сколько зарабатываем с одной продажи после затрат на привлечение.")}
             value={m(u.profitAfterCac ?? 0)}
             bad={(u.profitAfterCac ?? 0) < 0}
           />
@@ -548,18 +580,23 @@ function ProductCard({
 
 function Derived({
   label,
+  info,
   value,
   sub,
   bad,
 }: {
   label: string;
+  info?: string;
   value: string;
   sub?: string;
   bad?: boolean;
 }) {
   return (
     <div>
-      <div className="text-[11px] font-bold text-muted">{label}</div>
+      <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted">
+        {label}
+        {info && <InfoTip text={info} />}
+      </div>
       <div
         className={`text-base font-extrabold tabular-nums ${bad ? "text-bad" : ""}`}
       >

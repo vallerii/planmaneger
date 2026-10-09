@@ -747,6 +747,39 @@ export default function ProfileApp({
 
   const removing = items.find((i) => i.id === removeId);
 
+  /** Профиль продукта целиком в JSON (в текущем языке интерфейса). */
+  function exportJson() {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { project_id, ...prof } = profileView;
+    const byKindOut: Record<string, unknown[]> = {};
+    for (const i of [...itemsView].sort((a, b) => a.position - b.position)) {
+      (byKindOut[i.kind] ??= []).push({
+        title: i.title,
+        status: i.status,
+        ...i.data,
+        id: i.id,
+        created_at: i.created_at,
+        updated_at: i.updated_at,
+      });
+    }
+    const data = {
+      project: tr.projectName(name),
+      exportedAt: new Date().toISOString(),
+      lang,
+      profile: prof,
+      items: byKindOut,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${name.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase() || "product"}-profile.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 500);
+    toast(t("Профиль экспортирован"));
+  }
+
   async function rename(v: string) {
     setName(v);
     track(supabase.from("projects").update({ name: v }).eq("id", project.id));
@@ -775,6 +808,9 @@ export default function ProfileApp({
           <ProjectNav projectId={project.id} active="profile" />
           <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1 md:basis-0">
             <LangSwitcher />
+            <Btn onClick={exportJson} title={t("Скачать профиль продукта в JSON")}>
+              {t("Экспорт JSON")}
+            </Btn>
             {readOnly ? (
               isViewer && (
                 <span

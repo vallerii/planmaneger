@@ -38,7 +38,7 @@ import type {
   Task,
 } from "@/lib/types";
 import { SIZES } from "@/lib/types";
-import { buildSchedule, parseDate } from "@/lib/schedule";
+import { buildSchedule, initials, parseDate } from "@/lib/schedule";
 import {
   Brand,
   Btn,
@@ -108,9 +108,11 @@ export default function Board({
   );
   const [toastText, setToastText] = useState<string | null>(null);
   const [modal, setModal] = useState<
-    null | "phase" | "task" | "date" | "settings" | "members"
+    null | "phase" | "task" | "settings" | "members"
   >(null);
   const [draftTask, setDraftTask] = useState<Task | null>(null);
+  // участники открыты из настроек — по закрытию вернёмся в настройки
+  const [membersFromSettings, setMembersFromSettings] = useState(false);
   const [confirmTask, setConfirmTask] = useState<string | null>(null);
   const [confirmPhase, setConfirmPhase] = useState<string | null>(null);
   const [confirmProject, setConfirmProject] = useState(false);
@@ -690,15 +692,17 @@ export default function Board({
                 </span>
               )
             ) : (
-              <>
-                <Btn onClick={() => setModal("date")}>
-                  {t("Старт:")} {i18n.date(parseDate(project.start_date))}
-                </Btn>
-                <Btn onClick={() => setModal("settings")}>{t("⚙ Настройки")}</Btn>
-              </>
+              <Btn
+                onClick={() => setModal("settings")}
+                title={`${t("Старт:")} ${i18n.date(parseDate(project.start_date))} · 👥 ${members.length}`}
+              >
+                {t("⚙ Настройки")}
+              </Btn>
             )}
             <LangSwitcher />
-            <Btn onClick={() => setModal("members")}>👥 {members.length}</Btn>
+            {readOnly && (
+              <Btn onClick={() => setModal("members")}>👥 {members.length}</Btn>
+            )}
             {unread.enabled && (
               <CommentsBell
                 list={unread.list}
@@ -906,23 +910,25 @@ export default function Board({
           onError={fail}
         />
       )}
-      {modal === "date" && (
-        <DateModal
-          open
-          value={project.start_date}
-          onClose={() => setModal(null)}
-          onSave={(v) => updateProject({ start_date: v })}
-        />
-      )}
       {modal === "settings" && (
         <SettingsModal
           open
           projectId={project.id}
           sizeDays={sd}
+          startDate={project.start_date}
+          members={members}
           isOwner={isOwner}
           onClose={() => setModal(null)}
-          onSave={(v) => {
-            updateProject({ size_days: v });
+          onMembers={() => {
+            setMembersFromSettings(true);
+            setModal("members");
+          }}
+          onSave={({ sizeDays, startDate }) => {
+            updateProject(
+              startDate && startDate !== project.start_date
+                ? { size_days: sizeDays, start_date: startDate }
+                : { size_days: sizeDays },
+            );
             toast(t("Настройки сохранены"));
           }}
           onDelete={() => {
@@ -933,7 +939,10 @@ export default function Board({
       )}
       <MembersModal
         open={modal === "members"}
-        onClose={() => setModal(null)}
+        onClose={() => {
+          setModal(membersFromSettings ? "settings" : null);
+          setMembersFromSettings(false);
+        }}
         projectId={project.id}
         projectName={project.name}
         isOwner={isOwner}
@@ -1046,68 +1055,68 @@ function NameModal({
   );
 }
 
-function DateModal({
-  open,
-  value,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  value: string;
-  onClose: () => void;
-  onSave: (v: string) => void;
-}) {
-  const t = useT();
-  const [v, setV] = useState(value);
-  return (
-    <Modal open={open} onClose={onClose} title={t("Дата старта")}>
-      <Field label={t("Первый рабочий день")}>
-        <input
-          type="date"
-          className={inputCls}
-          value={v}
-          onChange={(e) => setV(e.target.value)}
-        />
-      </Field>
-      <div className="mt-5 flex justify-end gap-2">
-        <Btn onClick={onClose}>{t("Отмена")}</Btn>
-        <Btn
-          variant="primary"
-          onClick={() => {
-            if (v) onSave(v);
-            onClose();
-          }}
-        >
-          {t("Пересчитать")}
-        </Btn>
-      </div>
-    </Modal>
-  );
-}
-
 function SettingsModal({
   open,
   projectId,
   sizeDays,
+  startDate,
+  members,
   isOwner,
   onClose,
+  onMembers,
   onSave,
   onDelete,
 }: {
   open: boolean;
   projectId: string;
   sizeDays: SizeDays;
+  startDate: string;
+  members: Member[];
   isOwner: boolean;
   onClose: () => void;
-  onSave: (v: SizeDays) => void;
+  onMembers: () => void;
+  onSave: (v: { sizeDays: SizeDays; startDate: string }) => void;
   onDelete: () => void;
 }) {
   const t = useT();
   const [v, setV] = useState<Record<string, string>>(() =>
     Object.fromEntries(SIZES.map((k) => [k, String(sizeDays[k])])),
   );
+  const [start, setStart] = useState(startDate);
   return (
     <Modal open={open} onClose={onClose} title={t("Настройки проекта")}>
+      <Field label={t("Дата старта (первый рабочий день)")}>
+        <input
+          type="date"
+          className={inputCls}
+          value={start}
+          onChange={(e) => setStart(e.target.value)}
+        />
+      </Field>
+      <Field label={t("Участники")}>
+        <button
+          type="button"
+          onClick={onMembers}
+          className="flex w-full items-center gap-3 rounded-[11px] border border-line bg-white px-3 py-2 text-left hover:border-[#c9c6bb]"
+        >
+          <span className="flex -space-x-1.5">
+            {members.slice(0, 5).map((m) => (
+              <span
+                key={m.user_id}
+                className="grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-[#e7e5dd] text-[11px] font-extrabold"
+              >
+                {initials(m.profile?.full_name || m.profile?.email || "?")}
+              </span>
+            ))}
+          </span>
+          <span className="flex-1 text-sm font-semibold">
+            👥 {members.length}
+          </span>
+          <span className="text-sm font-bold text-muted">
+            {t("Управлять →")}
+          </span>
+        </button>
+      </Field>
       <Field label={t("Размер задачи → рабочих дней")}>
         <span className="grid grid-cols-[1fr_110px] items-center gap-2">
           {SIZES.map((k) => (
@@ -1148,7 +1157,7 @@ function SettingsModal({
               const next = Object.fromEntries(
                 SIZES.map((k) => [k, Math.max(0.25, Number(v[k]) || 1)]),
               ) as SizeDays;
-              onSave(next);
+              onSave({ sizeDays: next, startDate: start });
               onClose();
             }}
           >

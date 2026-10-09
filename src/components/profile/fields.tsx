@@ -104,16 +104,87 @@ export function AutoText({
 export function Label({
   children,
   hint,
+  info,
 }: {
   children: ReactNode;
   hint?: string;
+  /** пояснение к полю — иконка «i», текст по наведению / фокусу / тапу (уже переведённый) */
+  info?: string;
 }) {
   const t = useT();
   return (
     <div className="mb-1.5 flex items-baseline gap-2">
       <span className="text-[11px] font-bold text-muted">{children}</span>
+      {info && <InfoTip text={info} />}
       {hint && <span className="text-[11px] text-[#aaa]">{t(hint)}</span>}
     </div>
+  );
+}
+
+const TIP_W = 260;
+
+/** Иконка «i» с всплывающим пояснением. На телефоне открывается тапом, закрывается тапом мимо. */
+export function InfoTip({ text }: { text: string }) {
+  const t = useT();
+  const ref = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{
+    left: number;
+    top?: number;
+    bottom?: number;
+  } | null>(null);
+
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const left = Math.max(
+      8,
+      Math.min(r.left + r.width / 2 - TIP_W / 2, window.innerWidth - TIP_W - 8),
+    );
+    // у нижнего края экрана — показываем над иконкой
+    setPos(
+      r.bottom + 140 > window.innerHeight
+        ? { left, bottom: window.innerHeight - r.top + 6 }
+        : { left, top: r.bottom + 6 },
+    );
+  };
+  const hide = () => setPos(null);
+
+  useEffect(() => {
+    if (!pos) return;
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("resize", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("resize", hide);
+    };
+  }, [pos]);
+
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        aria-label={t("Подсказка")}
+        aria-expanded={!!pos}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        onClick={show}
+        className="inline-flex h-[14px] w-[14px] shrink-0 cursor-help items-center justify-center self-center rounded-full border border-current text-[9px] font-extrabold leading-none text-[#aaa] hover:text-ink focus:outline-none focus-visible:text-ink"
+      >
+        i
+      </button>
+      {pos && (
+        <span
+          role="tooltip"
+          style={{ position: "fixed", width: TIP_W, ...pos }}
+          className="pointer-events-none z-50 rounded-lg bg-ink px-3 py-2 text-xs leading-snug font-medium text-white shadow-lg"
+        >
+          {text}
+        </span>
+      )}
+    </>
   );
 }
 
