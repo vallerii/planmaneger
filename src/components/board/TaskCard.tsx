@@ -5,7 +5,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
 import { SIZES, STATUS_META } from "@/lib/types";
-import { Select, TrashIcon, trashBtnCls } from "../ui";
+import { Avatar, Select, TrashIcon, trashBtnCls } from "../ui";
 import {
   deadlineStatus,
   effectiveProgress,
@@ -49,7 +49,7 @@ export function TaskCardView({
     <div
       className={`group relative rounded-[13px] border border-[#dedcd4] bg-white p-3 transition hover:border-[#cbc8be] hover:shadow-[0_7px_18px_rgba(20,20,10,.07)] ${
         overlay ? "cursor-grabbing shadow-soft" : "cursor-grab"
-      } ${t.status === "cancelled" ? "opacity-60" : ""}`}
+      } ${t.dimmed && !overlay ? "opacity-35" : t.status === "cancelled" ? "opacity-60" : ""}`}
       style={{ minHeight: MIN_H[t.size] }}
     >
       <div className="flex items-start gap-[7px]">
@@ -125,6 +125,10 @@ export function TaskCardView({
             total: fmtDays(sizeOf(t, sizeDays)),
           })}
         </span>
+        <div className="flex items-center gap-1.5">
+        {t.assignee && (
+          <Avatar name={t.assignee.full_name || t.assignee.email} size={24} />
+        )}
         {!onUpdate ? (
           <span className="rounded-[7px] bg-[#f0efe9] px-2 py-0.5 text-xs font-extrabold">
             {t.size}
@@ -143,6 +147,7 @@ export function TaskCardView({
           }))}
         />
         )}
+        </div>
       </div>
 
       <label

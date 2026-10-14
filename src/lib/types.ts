@@ -11,6 +11,12 @@ export type Profile = {
   avatar_url: string | null;
 };
 
+/** Настройки писем (миграция 0014). */
+export type NotifyPrefs = {
+  notify_assign: boolean;
+  notify_comments: boolean;
+};
+
 export type Project = {
   id: string;
   name: string;
@@ -86,10 +92,20 @@ export type Task = {
   counted_from?: string | null;
   deadline: string | null;
   position: number;
+  /** исполнитель — владелец или редактор проекта (миграция 0014) */
+  assignee_id?: string | null;
   comment_count?: number;
   /** непрочитанные мной комментарии (только на клиенте) */
   unread?: number;
+  /** исполнитель для карточки (только на клиенте) */
+  assignee?: Pick<Profile, "full_name" | "email"> | null;
+  /** не подходит под фильтр «Исполнитель» — карточка приглушена (только на клиенте) */
+  dimmed?: boolean;
 };
+
+/** Кого можно назначить исполнителем: владелец и редакторы. */
+export const assignable = (members: Member[]) =>
+  members.filter((m) => m.role !== "viewer" && m.profile);
 
 export type Comment = {
   id: string;

@@ -4,7 +4,7 @@ import { useI18n } from "@/i18n/client";
 import { useContentTr } from "@/lib/translate/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { STATUSES, STATUS_META, type Status } from "@/lib/types";
+import { STATUSES, STATUS_META, assignable, type Status } from "@/lib/types";
 import type {
   Comment,
   Member,
@@ -38,7 +38,7 @@ import {
   type ProductProfile,
   type ProfileItem,
 } from "@/lib/profile";
-import { Btn, Select, TrashIcon, trashBtnCls } from "../ui";
+import { Avatar, Btn, Select, TrashIcon, trashBtnCls } from "../ui";
 import RichEditor from "./RichEditor";
 import ShareDialog, { LinkIcon } from "./ShareDialog";
 
@@ -65,6 +65,10 @@ type Props = {
   freshCommentIds?: Set<string>;
   /** клиент / партнёр: только просмотр */
   readOnly?: boolean;
+  /** false — миграция 0014 не запущена: поле «Исполнитель» скрыто */
+  canAssign?: boolean;
+  /** почта подключена — показываем, что исполнителю придёт письмо */
+  emailEnabled?: boolean;
 };
 
 
@@ -85,6 +89,8 @@ export default function TaskDrawer({
   onDelete,
   freshCommentIds,
   readOnly = false,
+  canAssign = true,
+  emailEnabled = false,
 }: Props) {
   const { t, locale, workdays, html, lang } = useI18n();
   const ctr = useContentTr();
@@ -420,6 +426,18 @@ export default function TaskDrawer({
           {/* fieldset disabled — все поля ниже недоступны для правки */}
           <fieldset disabled={readOnly} className="m-0 min-w-0 border-0 p-0">
           <div className="grid gap-2.5 sm:grid-cols-2">
+            {canAssign && (
+            <AssigneeCard
+              task={task}
+              emailEnabled={emailEnabled}
+              me={me}
+              members={members}
+              readOnly={readOnly}
+              onChange={(assignee_id) => onUpdate({ assignee_id })}
+              className={card + " sm:col-span-2"}
+              labelClassName={lbl}
+            />
+            )}
             <div className={card}>
               <label className={lbl}>{t("Размер")}</label>
               <Select
@@ -748,6 +766,97 @@ export default function TaskDrawer({
         />
       )}
     </>
+  );
+}
+
+/** Исполнитель задачи: выбор из владельца и редакторов + «Назначить меня». */
+function AssigneeCard({
+  task,
+  me,
+  members,
+  readOnly,
+  onChange,
+  className,
+  labelClassName,
+  emailEnabled,
+}: {
+  task: Task;
+  emailEnabled: boolean;
+  me: Profile;
+  members: Member[];
+  readOnly: boolean;
+  onChange: (id: string | null) => void;
+  className: string;
+  labelClassName: string;
+}) {
+  const { t } = useI18n();
+  const people = assignable(members);
+  const current = members.find((m) => m.user_id === task.assignee_id);
+  const canTakeMe =
+    !readOnly &&
+    task.assignee_id !== me.id &&
+    people.some((m) => m.user_id === me.id);
+  const nameOf = (m: Member) =>
+    m.profile?.full_name || m.profile?.email || t("Пользователь");
+  const person = (m: Member) => (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <Avatar name={nameOf(m)} />
+      <span className="truncate">
+        {nameOf(m)}
+        {m.user_id === me.id && (
+          <span className="text-muted"> · {t("я")}</span>
+        )}
+      </span>
+    </span>
+  );
+  return (
+    <div className={className}>
+      <div className="flex items-baseline gap-2">
+        <label className={labelClassName}>{t("Исполнитель")}</label>
+        {canTakeMe && (
+          <button
+            type="button"
+            onClick={() => onChange(me.id)}
+            className="ml-auto text-[11px] font-bold text-muted hover:text-ink"
+          >
+            {t("Назначить меня")}
+          </button>
+        )}
+      </div>
+      {readOnly ? (
+        <div className="flex h-[37px] items-center rounded-lg bg-[#f5f4ef] px-2.5">
+          {current ? (
+            person(current)
+          ) : (
+            <span className="text-muted">{t("— не назначен")}</span>
+          )}
+        </div>
+      ) : (
+        <Select
+          value={task.assignee_id ?? ""}
+          onChange={(v: string) => onChange(v || null)}
+          menuWidth={300}
+          ariaLabel={t("Исполнитель")}
+          className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
+          options={[
+            {
+              value: "",
+              label: <span className="text-muted">{t("— не назначен")}</span>,
+            },
+            // назначен тот, кто уже не может быть исполнителем, — всё равно показать
+            ...(current && !people.includes(current) ? [current] : []),
+            ...people,
+          ].map((o) =>
+            "user_id" in o ? { value: o.user_id, label: person(o) } : o,
+          )}
+        />
+      )}
+      {emailEnabled && !readOnly && task.assignee_id && task.assignee_id !== me.id && (
+        <div className="mt-1 text-[11px] text-muted">
+          {t("Исполнителю придёт письмо, если он не отключил уведомления")}
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -37,7 +37,7 @@ import type {
   SizeDays,
   Task,
 } from "@/lib/types";
-import { SIZES } from "@/lib/types";
+import { SIZES, assignable } from "@/lib/types";
 import { buildSchedule, initials, parseDate } from "@/lib/schedule";
 import {
   Brand,
@@ -75,6 +75,10 @@ type Props = {
   initialTaskId?: string | null;
   /** AI-перевод контента для EN / DE (миграция 0012) */
   translations?: TrMap | null;
+  /** false — миграция 0014 не запущена: исполнителя назначить нельзя */
+  canAssign?: boolean;
+  /** почта подключена (ключи на сервере) — после назначения отправляем письмо */
+  emailEnabled?: boolean;
 };
 
 const byPos = <T extends { position: number }>(a: T, b: T) =>
@@ -90,6 +94,8 @@ export default function Board({
   hypotheses = null,
   initialTaskId = null,
   translations = null,
+  canAssign = true,
+  emailEnabled = false,
 }: Props) {
   const i18n = useI18n();
   const { t } = i18n;
@@ -111,6 +117,8 @@ export default function Board({
     null | "phase" | "task" | "settings" | "members"
   >(null);
   const [draftTask, setDraftTask] = useState<Task | null>(null);
+  /** фильтр «Исполнитель»: all — все, me — мои, none — без исполнителя, иначе id участника */
+  const [who, setWho] = useState<string>("all");
   // участники открыты из настроек — по закрытию вернёмся в настройки
   const [membersFromSettings, setMembersFromSettings] = useState(false);
   const [confirmTask, setConfirmTask] = useState<string | null>(null);
@@ -172,14 +180,24 @@ export default function Board({
   // ---------- derived ----------
   const columns = useMemo(() => {
     const map: Record<string, Task[]> = {};
+    const people = new Map(members.map((m) => [m.user_id, m.profile]));
+    const target = who === "me" ? me.id : who;
     for (const p of phases) map[p.id] = [];
     for (const t of tasks)
       (map[t.phase_id] ??= []).push(
-        tr.task({ ...t, unread: unread.byTask[t.id] ?? 0 }),
+        tr.task({
+          ...t,
+          unread: unread.byTask[t.id] ?? 0,
+          assignee: (t.assignee_id && people.get(t.assignee_id)) || null,
+          // не прячем, а приглушаем: иначе сбиваются сроки и порядок при перетаскивании
+          dimmed:
+            who !== "all" &&
+            (who === "none" ? !!t.assignee_id : t.assignee_id !== target),
+        }),
       );
     for (const k in map) map[k].sort(byPos);
     return map;
-  }, [phases, tasks, unread.byTask, tr]);
+  }, [phases, tasks, unread.byTask, tr, members, who, me.id]);
   const phasesView = useMemo(() => phases.map(tr.phase), [phases, tr]);
   const hypothesesView = useMemo(
     () =>
@@ -459,11 +477,13 @@ export default function Board({
         status: draft.status,
         deadline: draft.deadline,
         ...(draft.hypothesis_id ? { hypothesis_id: draft.hypothesis_id } : {}),
+        ...(draft.assignee_id ? { assignee_id: draft.assignee_id } : {}),
         position,
       })
       .select()
       .single();
     if (error) return fail(error);
+    if (draft.assignee_id && draft.assignee_id !== me.id) notifyAssignee();
     setTasks((ts) =>
       ts.some((t) => t.id === data.id)
         ? ts
@@ -471,16 +491,35 @@ export default function Board({
     );
   }
 
+  /** Письмо исполнителю — сразу (очередь в базе, миграция 0014). Ошибки не мешают работе. */
+  const notifyAssignee = useCallback(() => {
+    if (!emailEnabled) return; // почта ещё не подключена — писем нет
+    fetch(`/api/projects/${project.id}/notify`, { method: "POST" }).catch(
+      () => {},
+    );
+  }, [project.id, emailEnabled]);
+
   const updateTask = useCallback(
     async (id: string, patch: Partial<Task>) => {
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-      const { comment_count: _c, unread: _u, ...dbPatch } = patch;
+      const {
+        comment_count: _c,
+        unread: _u,
+        assignee: _a,
+        dimmed: _d,
+        ...dbPatch
+      } = patch;
       void _c;
       void _u;
-      if (Object.keys(dbPatch).length)
-        fail((await supabase.from("tasks").update(dbPatch).eq("id", id)).error);
+      void _a;
+      void _d;
+      if (!Object.keys(dbPatch).length) return;
+      const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
+      fail(error);
+      if (!error && dbPatch.assignee_id && dbPatch.assignee_id !== me.id)
+        notifyAssignee();
     },
-    [supabase, fail],
+    [supabase, fail, me.id, notifyAssignee],
   );
 
   async function deleteTask(id: string) {
@@ -762,6 +801,39 @@ export default function Board({
           <span>
             <b>P1</b>{" "}{t("— приоритет. Клик по карточке открывает детали. Отменённые задачи не учитываются в сроках.")}
           </span>
+          {canAssign && (
+          <div className="flex items-center gap-2 md:ml-auto">
+            <span>{t("Исполнитель:")}</span>
+            <Select
+              size="sm"
+              value={who}
+              onChange={setWho}
+              menuWidth={240}
+              ariaLabel={t("Фильтр по исполнителю")}
+              options={[
+                { value: "all", label: t("Все задачи") },
+                ...(members.some((m) => m.user_id === me.id && m.role !== "viewer")
+                  ? [{ value: "me", label: t("Мои задачи") }]
+                  : []),
+                { value: "none", label: t("Без исполнителя") },
+                ...assignable(members)
+                  .filter((m) => m.user_id !== me.id)
+                  .map((m) => ({
+                    value: m.user_id,
+                    label: m.profile?.full_name || m.profile?.email || "",
+                  })),
+              ]}
+            />
+            {who !== "all" && (
+              <button
+                onClick={() => setWho("all")}
+                className="text-xs font-bold text-muted hover:text-ink"
+              >
+                {t("сбросить")}
+              </button>
+            )}
+          </div>
+          )}
         </div>
 
         <DndContext
@@ -859,6 +931,8 @@ export default function Board({
           me={me}
           members={members}
           projectId={project.id}
+          canAssign={canAssign}
+          emailEnabled={emailEnabled}
           hypotheses={hypothesesView}
           freshCommentIds={fresh.task === activeTask.id ? fresh.ids : undefined}
           readOnly={readOnly}
@@ -898,6 +972,8 @@ export default function Board({
           me={me}
           members={members}
           projectId={project.id}
+          canAssign={canAssign}
+          emailEnabled={emailEnabled}
           hypotheses={hypotheses}
           onClose={() => setDraftTask(null)}
           onUpdate={(patch) =>

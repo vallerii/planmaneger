@@ -1833,4 +1833,69 @@ export const de: Record<string, string> = {
     "Produktprofil als JSON herunterladen",
   "Участники":
     "Mitglieder",
+  // исполнитель и email-уведомления (0014)
+  "Уведомления на почту":
+    "E-Mail-Benachrichtigungen",
+  "✉ Уведомления":
+    "✉ Benachrichtigungen",
+  "Письма на почту":
+    "E-Mails",
+  "Не удалось загрузить настройки. Возможно, не запущена миграция 0014.":
+    "Einstellungen konnten nicht geladen werden. Möglicherweise wurde Migration 0014 nicht ausgeführt.",
+  "Назначили задачу":
+    "Mir wurde eine Aufgabe zugewiesen",
+  "Сразу, когда вас делают исполнителем":
+    "Sofort, wenn Sie als Verantwortliche(r) eingetragen werden",
+  "Непрочитанные комментарии":
+    "Ungelesene Kommentare",
+  "Сводка, если комментарий не прочитан в планере за 10 минут":
+    "Eine Zusammenfassung, wenn ein Kommentar 10 Minuten lang im Planer ungelesen bleibt",
+  "Исполнитель:":
+    "Verantwortlich:",
+  "Фильтр по исполнителю":
+    "Nach Verantwortlichen filtern",
+  "Все задачи":
+    "Alle Aufgaben",
+  "Мои задачи":
+    "Meine Aufgaben",
+  "Без исполнителя":
+    "Ohne Verantwortliche(n)",
+  "сбросить":
+    "zurücksetzen",
+  "я":
+    "ich",
+  "Исполнитель":
+    "Verantwortlich",
+  "Назначить меня":
+    "Mir zuweisen",
+  "— не назначен":
+    "— nicht zugewiesen",
+  "Исполнителю придёт письмо, если он не отключил уведомления":
+    "Die/der Verantwortliche erhält eine E-Mail, sofern Benachrichtigungen nicht deaktiviert sind",
+  "Участник проекта":
+    "Ein Projektmitglied",
+  "Вам назначена задача: {task}":
+    "Ihnen wurde eine Aufgabe zugewiesen: {task}",
+  "Дедлайн: {date}":
+    "Deadline: {date}",
+  "Вам назначена задача":
+    "Ihnen wurde eine Aufgabe zugewiesen",
+  "{who} назначил(а) вас исполнителем в проекте «{project}»:":
+    "{who} hat Ihnen im Projekt „{project}“ eine Aufgabe zugewiesen:",
+  "Открыть задачу":
+    "Aufgabe öffnen",
+  "Письма можно отключить на главной странице планера: ✉ Уведомления.":
+    "Sie können diese E-Mails auf der Startseite des Planers abschalten: ✉ Benachrichtigungen.",
+  "{n} в «{project}»":
+    "{n} in „{project}“",
+  "новый комментарий":
+    "neuer Kommentar",
+  "новых комментария":
+    "neue Kommentare",
+  "новых комментариев":
+    "neue Kommentare",
+  "Открыть планер":
+    "Planer öffnen",
+  "Почта пока не подключена. Настройки сохранятся — письма начнут приходить после подключения.":
+    "E-Mail ist noch nicht verbunden. Ihre Einstellungen werden gespeichert — E-Mails kommen, sobald die Verbindung steht.",
 };

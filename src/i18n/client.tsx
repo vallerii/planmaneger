@@ -10,6 +10,7 @@ import {
   useTransition,
 } from "react";
 import { DEFAULT_LANG, LANG_COOKIE, type Lang, makeI18n } from "./core";
+import { createClient } from "@/lib/supabase/client";
 
 type Ctx = ReturnType<typeof makeI18n> & {
   setLang: (l: Lang) => void;
@@ -39,6 +40,12 @@ export function I18nProvider({
       document.cookie = `${LANG_COOKIE}=${l}; path=/; max-age=31536000; samesite=lax`;
       document.documentElement.lang = l;
       setState(l);
+      // язык писем-уведомлений (миграция 0014); без входа или без миграции — молча пропускаем
+      const sb = createClient();
+      sb.auth.getUser().then(({ data }) => {
+        if (data.user)
+          sb.from("profiles").update({ lang: l }).eq("id", data.user.id).then(() => {});
+      });
       start(() => router.refresh());
     },
     [router],

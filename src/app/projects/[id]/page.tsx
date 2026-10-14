@@ -5,6 +5,7 @@ import type { Member, Phase, Project, Task } from "@/lib/types";
 import { DEFAULT_SIZE_DAYS } from "@/lib/types";
 import { getLang } from "@/i18n/server";
 import { loadPageTranslation } from "@/lib/translate/server";
+import { mailConfigured } from "@/lib/notify/mailer";
 
 export default async function ProjectPage({
   params,
@@ -35,6 +36,7 @@ export default async function ProjectPage({
     hypRes,
     linkProbe,
     translations,
+    assigneeProbe,
   ] = await Promise.all([
     supabase.from("phases").select("*").eq("project_id", id).order("position"),
     supabase
@@ -66,6 +68,8 @@ export default async function ProjectPage({
     // есть ли колонка tasks.hypothesis_id (миграция 0004)
     supabase.from("tasks").select("hypothesis_id").limit(1),
     getLang().then((l) => loadPageTranslation(supabase, id, l)),
+    // есть ли колонка tasks.assignee_id (миграция 0014)
+    supabase.from("tasks").select("assignee_id").limit(1),
   ]);
   const hypotheses =
     hypRes.error || linkProbe.error
@@ -94,6 +98,8 @@ export default async function ProjectPage({
       hypotheses={hypotheses}
       initialTaskId={openTaskId ?? null}
       translations={translations}
+      canAssign={!assigneeProbe.error}
+      emailEnabled={mailConfigured()}
     />
   );
 }

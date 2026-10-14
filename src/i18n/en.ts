@@ -1833,4 +1833,69 @@ export const en: Record<string, string> = {
     "Download the product profile as JSON",
   "Участники":
     "Members",
+  // исполнитель и email-уведомления (0014)
+  "Уведомления на почту":
+    "Email notifications",
+  "✉ Уведомления":
+    "✉ Notifications",
+  "Письма на почту":
+    "Emails",
+  "Не удалось загрузить настройки. Возможно, не запущена миграция 0014.":
+    "Couldn't load settings. Migration 0014 may not have been run.",
+  "Назначили задачу":
+    "Task assigned to me",
+  "Сразу, когда вас делают исполнителем":
+    "Right away, when you're made the assignee",
+  "Непрочитанные комментарии":
+    "Unread comments",
+  "Сводка, если комментарий не прочитан в планере за 10 минут":
+    "A digest if a comment stays unread in the planner for 10 minutes",
+  "Исполнитель:":
+    "Assignee:",
+  "Фильтр по исполнителю":
+    "Filter by assignee",
+  "Все задачи":
+    "All tasks",
+  "Мои задачи":
+    "My tasks",
+  "Без исполнителя":
+    "Unassigned",
+  "сбросить":
+    "reset",
+  "я":
+    "me",
+  "Исполнитель":
+    "Assignee",
+  "Назначить меня":
+    "Assign to me",
+  "— не назначен":
+    "— unassigned",
+  "Исполнителю придёт письмо, если он не отключил уведомления":
+    "The assignee will get an email unless they've turned notifications off",
+  "Участник проекта":
+    "A project member",
+  "Вам назначена задача: {task}":
+    "Task assigned to you: {task}",
+  "Дедлайн: {date}":
+    "Deadline: {date}",
+  "Вам назначена задача":
+    "A task has been assigned to you",
+  "{who} назначил(а) вас исполнителем в проекте «{project}»:":
+    "{who} assigned you a task in the project “{project}”:",
+  "Открыть задачу":
+    "Open task",
+  "Письма можно отключить на главной странице планера: ✉ Уведомления.":
+    "You can turn these emails off on the planner's home page: ✉ Notifications.",
+  "{n} в «{project}»":
+    "{n} in “{project}”",
+  "новый комментарий":
+    "new comment",
+  "новых комментария":
+    "new comments",
+  "новых комментариев":
+    "new comments",
+  "Открыть планер":
+    "Open the planner",
+  "Почта пока не подключена. Настройки сохранятся — письма начнут приходить после подключения.":
+    "Email isn't connected yet. Your settings will be saved — emails will start arriving once it's connected.",
 };

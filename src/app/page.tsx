@@ -6,6 +6,7 @@ import CreateProject from "@/components/CreateProject";
 import ProjectCard from "@/components/ProjectCard";
 import RefreshOnFocus from "@/components/RefreshOnFocus";
 import { getI18n } from "@/i18n/server";
+import { mailConfigured } from "@/lib/notify/mailer";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -56,6 +57,7 @@ export default async function Home() {
           <UserMenu
             name={profile?.full_name ?? null}
             email={profile?.email ?? auth.user.email ?? ""}
+            emailEnabled={mailConfigured()}
           />
         </div>
       </header>

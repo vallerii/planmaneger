@@ -12,6 +12,7 @@ import {
   type ButtonHTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
+import { initials } from "@/lib/schedule";
 
 export function Btn({
   variant = "default",
@@ -454,5 +455,18 @@ export function ConfirmDialog({
         </Btn>
       </div>
     </Modal>
+  );
+}
+
+/** Кружок с инициалами (исполнитель задачи). */
+export function Avatar({ name, size = 22 }: { name: string; size?: number }) {
+  return (
+    <span
+      className="grid shrink-0 place-items-center rounded-full bg-ink font-black text-white"
+      style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}
+      title={name}
+    >
+      {initials(name)}
+    </span>
   );
 }
