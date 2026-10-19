@@ -60,7 +60,7 @@ export function Modal({
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full rounded-[18px] bg-white p-5 shadow-2xl"
+        className="max-h-[calc(100dvh-40px)] w-full overflow-y-auto rounded-[18px] bg-white p-5 shadow-2xl"
         style={{ maxWidth: width }}
       >
         <h2 className="mb-4 text-[21px] font-bold">{title}</h2>
@@ -116,6 +116,8 @@ export type SelectOption<T extends string> = {
   value: T;
   label: ReactNode;
   hint?: ReactNode;
+  /** заголовок группы — показывается над первым пунктом группы */
+  group?: string;
 };
 
 export function Select<T extends string>({
@@ -292,9 +294,16 @@ export function Select<T extends string>({
           >
             {options.map((o, i) => {
               const selected = o.value === value;
+              const header =
+                o.group && o.group !== options[i - 1]?.group ? o.group : null;
               return (
+                <div key={o.value}>
+                {header && (
+                  <div className="px-2.5 pt-2 pb-1 text-[10px] font-extrabold tracking-[.07em] text-muted uppercase">
+                    {header}
+                  </div>
+                )}
                 <div
-                  key={o.value}
                   role="option"
                   aria-selected={selected}
                   onMouseEnter={() => setActive(i)}
@@ -314,6 +323,7 @@ export function Select<T extends string>({
                   >
                     ✓
                   </span>
+                </div>
                 </div>
               );
             })}
@@ -459,10 +469,23 @@ export function ConfirmDialog({
 }
 
 /** Кружок с инициалами (исполнитель задачи). */
-export function Avatar({ name, size = 22 }: { name: string; size?: number }) {
+export function Avatar({
+  name,
+  size = 22,
+  external = false,
+}: {
+  name: string;
+  size?: number;
+  /** человек из команды проекта (не пользователь) — контурный кружок */
+  external?: boolean;
+}) {
   return (
     <span
-      className="grid shrink-0 place-items-center rounded-full bg-ink font-black text-white"
+      className={`grid shrink-0 place-items-center rounded-full font-black ${
+        external
+          ? "border-[1.5px] border-dashed border-ink bg-white text-ink"
+          : "bg-ink text-white"
+      }`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}
       title={name}
     >

@@ -55,7 +55,14 @@ function RunButton({
 }
 
 /** Блок «Перевод для партнёров» в настройках проекта. */
-export function TranslatePanel({ projectId }: { projectId: string }) {
+export function TranslatePanel({
+  projectId,
+  bare = false,
+}: {
+  projectId: string;
+  /** внутри своей модалки: без рамки и заголовка (заголовок — у модалки) */
+  bare?: boolean;
+}) {
   const { t } = useI18n();
   const fmt = useFmt();
   const tr = useTranslation(projectId);
@@ -77,14 +84,28 @@ export function TranslatePanel({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="rounded-[13px] border border-line p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <b>{t("Перевод для партнёров")}</b>
-        <span className="text-xs text-muted">EN · DE</span>
-      </div>
-      <p className="mt-1 text-sm text-muted">
+    <div className={bare ? "" : "rounded-[13px] border border-line p-4"}>
+      {!bare && (
+        <div className="flex items-baseline justify-between gap-2">
+          <b>{t("Перевод для партнёров")}</b>
+          <span className="text-xs text-muted">EN · DE</span>
+        </div>
+      )}
+      <p className={bare ? "text-sm text-muted" : "mt-1 text-sm text-muted"}>
         {t("Задачи, профиль и названия переводятся на английский и немецкий по кнопке. Переводятся только новые и изменённые тексты.")}
       </p>
+      {!status && !error && (
+        // заглушка той же высоты — окно не прыгает, пока грузится статус
+        <div className="mt-3 flex flex-col gap-1 text-sm" aria-hidden>
+          {["EN", "DE"].map((l) => (
+            <div key={l} className="flex items-baseline gap-x-2">
+              <b className="w-7">{l}</b>
+              <span className="h-[1em] w-40 animate-pulse rounded bg-[#efede6]" />
+            </div>
+          ))}
+          <span className="mt-2 h-5 w-48 animate-pulse rounded bg-[#efede6]" />
+        </div>
+      )}
       {status && (
         <div className="mt-3 flex flex-col gap-1 text-sm">
           {(["en", "de"] as const).map((l) => (

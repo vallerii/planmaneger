@@ -94,11 +94,15 @@ export type Task = {
   position: number;
   /** исполнитель — владелец или редактор проекта (миграция 0014) */
   assignee_id?: string | null;
+  /** исполнитель из команды проекта — внешний, без регистрации (миграция 0015) */
+  team_member_id?: string | null;
   comment_count?: number;
   /** непрочитанные мной комментарии (только на клиенте) */
   unread?: number;
   /** исполнитель для карточки (только на клиенте) */
   assignee?: Pick<Profile, "full_name" | "email"> | null;
+  /** исполнитель из команды для карточки (только на клиенте) */
+  teamMember?: TeamMember | null;
   /** не подходит под фильтр «Исполнитель» — карточка приглушена (только на клиенте) */
   dimmed?: boolean;
 };
@@ -120,6 +124,34 @@ export type Member = {
   user_id: string;
   role: Role;
   profile: Profile | null;
+};
+
+/**
+ * Человек из команды проекта (миграция 0015): программист, дизайнер…
+ * Не пользователь планера. Клиенту (viewer) приходят только id и роль — name/contact пустые.
+ */
+export type TeamMember = {
+  id: string;
+  role: TeamRole;
+  role_custom: string | null;
+  name?: string;
+  contact?: string | null;
+  archived?: boolean;
+};
+
+export const TEAM_ROLES = ["developer", "designer", "qa", "other"] as const;
+export type TeamRole = (typeof TEAM_ROLES)[number];
+export const TEAM_ROLE_LABEL: Record<TeamRole, string> = {
+  developer: "Программист",
+  designer: "Дизайнер",
+  qa: "Тестировщик",
+  other: "Другое",
+};
+export const TEAM_ROLE_ICON: Record<TeamRole, string> = {
+  developer: "💻",
+  designer: "🎨",
+  qa: "🧪",
+  other: "🛠",
 };
 
 export type Invite = {

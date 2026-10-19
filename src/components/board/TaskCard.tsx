@@ -6,6 +6,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Size, SizeDays, Task } from "@/lib/types";
 import { SIZES, STATUS_META } from "@/lib/types";
 import { Avatar, Select, TrashIcon, trashBtnCls } from "../ui";
+import { teamRoleIcon, teamRoleLabel } from "@/lib/team";
 import {
   deadlineStatus,
   effectiveProgress,
@@ -129,6 +130,20 @@ export function TaskCardView({
         {t.assignee && (
           <Avatar name={t.assignee.full_name || t.assignee.email} size={24} />
         )}
+        {!t.assignee && t.teamMember &&
+          (t.teamMember.name ? (
+            <span title={`${t.teamMember.name} · ${teamRoleLabel(t.teamMember, tr)}`}>
+              <Avatar name={t.teamMember.name} size={24} external />
+            </span>
+          ) : (
+            // клиент видит только роль
+            <span
+              className="inline-flex h-6 items-center gap-1 rounded-full border border-dashed border-[#bdbbb2] px-1.5 text-[11px] font-extrabold"
+              title={teamRoleLabel(t.teamMember, tr)}
+            >
+              {teamRoleIcon(t.teamMember)} {teamRoleLabel(t.teamMember, tr)}
+            </span>
+          ))}
         {!onUpdate ? (
           <span className="rounded-[7px] bg-[#f0efe9] px-2 py-0.5 text-xs font-extrabold">
             {t.size}

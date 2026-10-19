@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Board from "@/components/board/Board";
-import type { Member, Phase, Project, Task } from "@/lib/types";
+import type { Member, Phase, Project, Task, TeamMember } from "@/lib/types";
 import { DEFAULT_SIZE_DAYS } from "@/lib/types";
 import { getLang } from "@/i18n/server";
 import { loadPageTranslation } from "@/lib/translate/server";
@@ -71,6 +71,19 @@ export default async function ProjectPage({
     // есть ли колонка tasks.assignee_id (миграция 0014)
     supabase.from("tasks").select("assignee_id").limit(1),
   ]);
+  // команда проекта (миграция 0015): владелец и редакторы видят имена и контакты,
+  // клиент — только роли. Ошибка (миграции нет) — блок скрыт.
+  const myRole = (members ?? []).find((m) => m.user_id === auth.user!.id)?.role;
+  const teamRes =
+    myRole === "owner" || myRole === "editor"
+      ? await supabase
+          .from("project_team")
+          .select("id,name,role,role_custom,contact,archived")
+          .eq("project_id", id)
+          .order("created_at")
+      : await supabase.rpc("project_team_roles", { p_project: id });
+  const team = teamRes.error ? null : ((teamRes.data ?? []) as TeamMember[]);
+
   const hypotheses =
     hypRes.error || linkProbe.error
       ? null
@@ -99,6 +112,7 @@ export default async function ProjectPage({
       initialTaskId={openTaskId ?? null}
       translations={translations}
       canAssign={!assigneeProbe.error}
+      initialTeam={assigneeProbe.error ? null : team}
       emailEnabled={mailConfigured()}
     />
   );

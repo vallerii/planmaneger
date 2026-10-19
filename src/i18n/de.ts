@@ -1902,4 +1902,70 @@ export const de: Record<string, string> = {
     "Alle Aufgaben anzeigen",
   "Выделить задачи, где я исполнитель":
     "Mir zugewiesene Aufgaben hervorheben",
+  "Команда проекта":
+    "Projektteam",
+  "Команда проекта — программисты, дизайнеры…":
+    "Projektteam — Entwickler, Designer…",
+  "＋ Добавить в команду…":
+    "＋ Zum Team hinzufügen…",
+  "Внешний исполнитель — писем не получает. Контакт: {contact}":
+    "Externe Person — erhält keine E-Mails. Kontakt: {contact}",
+  "Внешний исполнитель — писем не получает":
+    "Externe Person — erhält keine E-Mails",
+  "Человек с таким именем уже есть в команде":
+    "Eine Person mit diesem Namen ist bereits im Team",
+  "{name} добавлен в команду":
+    "{name} wurde zum Team hinzugefügt",
+  "{name} в архиве — в старых задачах остаётся":
+    "{name} archiviert — bleibt bei bestehenden Aufgaben",
+  "{name} снова в команде":
+    "{name} ist wieder im Team",
+  "Роль":
+    "Rolle",
+  "Какая роль? (копирайтер, SEO…)":
+    "Welche Rolle? (Texter, SEO…)",
+  "Контакт: Telegram, телефон…":
+    "Kontakt: Telegram, Telefon…",
+  "Вернуть":
+    "Wiederherstellen",
+  "Изменить":
+    "Bearbeiten",
+  "Убрать из списка выбора. В старых задачах исполнитель сохранится":
+    "Aus der Auswahl entfernen. Bestehende Aufgaben behalten die Person",
+  "В архив":
+    "Archivieren",
+  "Программисты, дизайнеры и другие исполнители — без регистрации и писем. Их можно назначать на задачи. Клиент видит только роль, без имени и контакта.":
+    "Entwickler, Designer und andere Auftragnehmer — ohne Registrierung und ohne E-Mails. Sie können Aufgaben zugewiesen werden. Kunden sehen nur die Rolle, nicht Name oder Kontakt.",
+  "В команде пока никого нет":
+    "Noch niemand im Team",
+  "В архиве":
+    "Archiviert",
+  "Добавить в команду":
+    "Zum Team hinzufügen",
+  "Имя, например «Олег»":
+    "Name, z. B. „Oleg“",
+  "Контакт: Telegram, телефон… (необязательно)":
+    "Kontakt: Telegram, Telefon… (optional)",
+  "Такой человек уже есть в команде:":
+    "Diese Person ist bereits im Team:",
+  "Возможно, этот человек уже есть:":
+    "Diese Person ist vielleicht schon im Team:",
+  "в архиве":
+    "archiviert",
+  "Добавить":
+    "Hinzufügen",
+  "Программист":
+    "Entwickler",
+  "Дизайнер":
+    "Designer",
+  "Тестировщик":
+    "Tester",
+  "Другое":
+    "Sonstiges",
+  "Перевод для партнёров · EN · DE":
+    "Übersetzung für Partner · EN · DE",
+  "← К настройкам":
+    "← Zurück zu den Einstellungen",
+  "Открыть →":
+    "Öffnen →",
 };

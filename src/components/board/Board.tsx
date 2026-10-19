@@ -36,8 +36,10 @@ import type {
   Size,
   SizeDays,
   Task,
+  TeamMember,
 } from "@/lib/types";
 import { SIZES, assignable } from "@/lib/types";
+import { teamDisplayName, teamRoleLabel } from "@/lib/team";
 import { buildSchedule, initials, parseDate } from "@/lib/schedule";
 import {
   Brand,
@@ -56,6 +58,7 @@ import TaskDrawer from "./TaskDrawer";
 import CommentsBell from "./CommentsBell";
 import { useUnreadComments } from "@/lib/unread";
 import MembersModal from "./MembersModal";
+import TeamModal from "./TeamModal";
 import ProjectTitle from "./ProjectTitle";
 import ProjectNav from "../ProjectNav";
 import type { HypothesisRef } from "./TaskDrawer";
@@ -79,6 +82,8 @@ type Props = {
   canAssign?: boolean;
   /** почта подключена (ключи на сервере) — после назначения отправляем письмо */
   emailEnabled?: boolean;
+  /** команда проекта (миграция 0015); null — миграция не запущена, блок скрыт */
+  initialTeam?: TeamMember[] | null;
 };
 
 const byPos = <T extends { position: number }>(a: T, b: T) =>
@@ -96,6 +101,7 @@ export default function Board({
   translations = null,
   canAssign = true,
   emailEnabled = false,
+  initialTeam = null,
 }: Props) {
   const i18n = useI18n();
   const { t } = i18n;
@@ -107,6 +113,12 @@ export default function Board({
   const [phases, setPhases] = useState(() => [...initialPhases].sort(byPos));
   const [tasks, setTasks] = useState(initialTasks);
   const [members, setMembers] = useState(initialMembers);
+  const [team, setTeam] = useState<TeamMember[]>(initialTeam ?? []);
+  const teamEnabled = initialTeam !== null;
+  /** команда открыта из настроек / из задачи — куда вернуться и кого назначить */
+  const [teamFrom, setTeamFrom] = useState<null | "settings" | "task" | "draft">(
+    null,
+  );
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() =>
     initialTaskId && initialTasks.some((t) => t.id === initialTaskId)
       ? initialTaskId
@@ -114,7 +126,7 @@ export default function Board({
   );
   const [toastText, setToastText] = useState<string | null>(null);
   const [modal, setModal] = useState<
-    null | "phase" | "task" | "settings" | "members"
+    null | "phase" | "task" | "settings" | "members" | "team" | "translate"
   >(null);
   const [draftTask, setDraftTask] = useState<Task | null>(null);
   /** фильтр «Исполнитель»: all — все, me — мои, none — без исполнителя, иначе id участника */
@@ -140,11 +152,12 @@ export default function Board({
       saved &&
       (saved === "me" ||
         saved === "none" ||
-        assignable(initialMembers).some((m) => m.user_id === saved))
+        assignable(initialMembers).some((m) => m.user_id === saved) ||
+        (initialTeam ?? []).some((m) => `team:${m.id}` === saved))
     )
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWhoState(saved);
-  }, [whoKey, initialMembers]);
+  }, [whoKey, initialMembers, initialTeam]);
   // участники открыты из настроек — по закрытию вернёмся в настройки
   const [membersFromSettings, setMembersFromSettings] = useState(false);
   const [confirmTask, setConfirmTask] = useState<string | null>(null);
@@ -207,7 +220,9 @@ export default function Board({
   const columns = useMemo(() => {
     const map: Record<string, Task[]> = {};
     const people = new Map(members.map((m) => [m.user_id, m.profile]));
+    const crew = new Map(team.map((m) => [m.id, m]));
     const target = who === "me" ? me.id : who;
+    const teamTarget = who.startsWith("team:") ? who.slice(5) : null;
     for (const p of phases) map[p.id] = [];
     for (const t of tasks)
       (map[t.phase_id] ??= []).push(
@@ -215,16 +230,29 @@ export default function Board({
           ...t,
           unread: unread.byTask[t.id] ?? 0,
           assignee: (t.assignee_id && people.get(t.assignee_id)) || null,
+          teamMember: (t.team_member_id && crew.get(t.team_member_id)) || null,
           // не прячем, а приглушаем: иначе сбиваются сроки и порядок при перетаскивании
           dimmed:
             who !== "all" &&
-            (who === "none" ? !!t.assignee_id : t.assignee_id !== target),
+            (who === "none"
+              ? !!t.assignee_id || !!t.team_member_id
+              : teamTarget
+                ? t.team_member_id !== teamTarget
+                : t.assignee_id !== target),
         }),
       );
     for (const k in map) map[k].sort(byPos);
     return map;
-  }, [phases, tasks, unread.byTask, tr, members, who, me.id]);
+  }, [phases, tasks, unread.byTask, tr, members, team, who, me.id]);
   const phasesView = useMemo(() => phases.map(tr.phase), [phases, tr]);
+  // в фильтре: активные + архивные, если они ещё стоят на задачах
+  const filterTeam = useMemo(
+    () =>
+      team.filter(
+        (m) => !m.archived || tasks.some((t) => t.team_member_id === m.id),
+      ),
+    [team, tasks],
+  );
   const iCanBeAssigned = members.some(
     (m) => m.user_id === me.id && m.role !== "viewer",
   );
@@ -252,6 +280,58 @@ export default function Board({
     () => buildSchedule(project.start_date, phases, columns, sd),
     [project.start_date, phases, columns, sd],
   );
+
+  // ---------- команда проекта: живое обновление ----------
+  useEffect(() => {
+    if (!teamEnabled) return;
+    if (isViewer) return; // клиенту таблица не видна — роли приходят через project_team_roles
+    const ch = supabase
+      .channel(`team-${project.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "project_team",
+          filter: `project_id=eq.${project.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "DELETE") return;
+          const row = payload.new as TeamMember;
+          setTeam((ts) =>
+            ts.some((m) => m.id === row.id)
+              ? ts.map((m) => (m.id === row.id ? { ...m, ...row } : m))
+              : [...ts, row],
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [supabase, project.id, teamEnabled, isViewer]);
+
+  // клиент: на задаче появился новый человек из команды — подгрузим роли заново
+  const unknownCrew = useMemo(
+    () =>
+      teamEnabled &&
+      tasks.some(
+        (t) => t.team_member_id && !team.some((m) => m.id === t.team_member_id),
+      ),
+    [teamEnabled, tasks, team],
+  );
+  useEffect(() => {
+    if (!unknownCrew || !isViewer) return;
+    let alive = true;
+    supabase
+      .rpc("project_team_roles", { p_project: project.id })
+      .then(({ data, error }) => {
+        if (alive && !error && data) setTeam(data as TeamMember[]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [unknownCrew, isViewer, supabase, project.id]);
 
   // ---------- realtime ----------
   useEffect(() => {
@@ -518,6 +598,9 @@ export default function Board({
         deadline: draft.deadline,
         ...(draft.hypothesis_id ? { hypothesis_id: draft.hypothesis_id } : {}),
         ...(draft.assignee_id ? { assignee_id: draft.assignee_id } : {}),
+        ...(draft.team_member_id && !draft.assignee_id
+          ? { team_member_id: draft.team_member_id }
+          : {}),
         position,
       })
       .select()
@@ -541,17 +624,24 @@ export default function Board({
 
   const updateTask = useCallback(
     async (id: string, patch: Partial<Task>) => {
+      // у задачи один исполнитель: участник ИЛИ человек из команды
+      if (teamEnabled) {
+        if (patch.assignee_id) patch = { ...patch, team_member_id: null };
+        else if (patch.team_member_id) patch = { ...patch, assignee_id: null };
+      }
       setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
       const {
         comment_count: _c,
         unread: _u,
         assignee: _a,
+        teamMember: _tm,
         dimmed: _d,
         ...dbPatch
       } = patch;
       void _c;
       void _u;
       void _a;
+      void _tm;
       void _d;
       if (!Object.keys(dbPatch).length) return;
       const { error } = await supabase.from("tasks").update(dbPatch).eq("id", id);
@@ -559,7 +649,7 @@ export default function Board({
       if (!error && dbPatch.assignee_id && dbPatch.assignee_id !== me.id)
         notifyAssignee();
     },
-    [supabase, fail, me.id, notifyAssignee],
+    [supabase, fail, me.id, notifyAssignee, teamEnabled],
   );
 
   async function deleteTask(id: string) {
@@ -829,7 +919,7 @@ export default function Board({
 
       <main className="px-4 pt-5 pb-10 md:px-6">
         {canAssign && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-2">
             {iCanBeAssigned && (
               <button
                 type="button"
@@ -874,7 +964,15 @@ export default function Board({
                   .map((m) => ({
                     value: m.user_id,
                     label: m.profile?.full_name || m.profile?.email || "",
+                    group: filterTeam.length ? t("Участники") : undefined,
                   })),
+                ...filterTeam.map((m) => ({
+                  value: `team:${m.id}`,
+                  label: isViewer
+                    ? teamRoleLabel(m, t)
+                    : `${teamDisplayName(m, t)} · ${teamRoleLabel(m, t)}`,
+                  group: t("Команда проекта"),
+                })),
               ]}
             />
             {who !== "all" && (
@@ -999,6 +1097,11 @@ export default function Board({
           projectId={project.id}
           canAssign={canAssign}
           emailEnabled={emailEnabled}
+          team={teamEnabled ? team : null}
+          onManageTeam={() => {
+            setTeamFrom("task");
+            setModal("team");
+          }}
           hypotheses={hypothesesView}
           freshCommentIds={fresh.task === activeTask.id ? fresh.ids : undefined}
           readOnly={readOnly}
@@ -1040,6 +1143,11 @@ export default function Board({
           projectId={project.id}
           canAssign={canAssign}
           emailEnabled={emailEnabled}
+          team={teamEnabled ? team : null}
+          onManageTeam={() => {
+            setTeamFrom("draft");
+            setModal("team");
+          }}
           hypotheses={hypotheses}
           onClose={() => setDraftTask(null)}
           onUpdate={(patch) =>
@@ -1065,6 +1173,12 @@ export default function Board({
             setMembersFromSettings(true);
             setModal("members");
           }}
+          team={teamEnabled ? team : null}
+          onTeam={() => {
+            setTeamFrom("settings");
+            setModal("team");
+          }}
+          onTranslate={() => setModal("translate")}
           onSave={({ sizeDays, startDate }) => {
             updateProject(
               startDate && startDate !== project.start_date
@@ -1076,6 +1190,41 @@ export default function Board({
           onDelete={() => {
             setModal(null);
             setConfirmProject(true);
+          }}
+        />
+      )}
+      <Modal
+        open={modal === "translate"}
+        onClose={() => setModal("settings")}
+        title={t("Перевод для партнёров · EN · DE")}
+      >
+        <TranslatePanel projectId={project.id} bare />
+        <div className="mt-4 flex justify-start">
+          <Btn variant="ghost" onClick={() => setModal("settings")}>
+            {t("← К настройкам")}
+          </Btn>
+        </div>
+      </Modal>
+      {teamEnabled && !readOnly && (
+        <TeamModal
+          open={modal === "team"}
+          onClose={() => {
+            setModal(teamFrom === "settings" ? "settings" : null);
+            setTeamFrom(null);
+          }}
+          projectId={project.id}
+          me={me}
+          team={team}
+          setTeam={setTeam}
+          toast={toast}
+          onAdded={(m) => {
+            // добавили из задачи — сразу назначаем
+            if (teamFrom === "task" && activeTaskId)
+              updateTask(activeTaskId, { team_member_id: m.id });
+            if (teamFrom === "draft")
+              setDraftTask((d) =>
+                d ? { ...d, team_member_id: m.id, assignee_id: null } : d,
+              );
           }}
         />
       )}
@@ -1199,13 +1348,15 @@ function NameModal({
 
 function SettingsModal({
   open,
-  projectId,
   sizeDays,
   startDate,
   members,
   isOwner,
   onClose,
   onMembers,
+  team,
+  onTeam,
+  onTranslate,
   onSave,
   onDelete,
 }: {
@@ -1217,6 +1368,10 @@ function SettingsModal({
   isOwner: boolean;
   onClose: () => void;
   onMembers: () => void;
+  /** null — миграция 0015 не запущена */
+  team: TeamMember[] | null;
+  onTeam: () => void;
+  onTranslate: () => void;
   onSave: (v: { sizeDays: SizeDays; startDate: string }) => void;
   onDelete: () => void;
 }) {
@@ -1235,6 +1390,8 @@ function SettingsModal({
           onChange={(e) => setStart(e.target.value)}
         />
       </Field>
+      {/* участники и команда — в два столбца, чтобы окно было ниже */}
+      <div className="grid gap-x-3 sm:grid-cols-2">
       <Field label={t("Участники")}>
         <button
           type="button"
@@ -1259,16 +1416,47 @@ function SettingsModal({
           </span>
         </button>
       </Field>
+      {team && (
+        <Field label={t("Команда проекта")}>
+          <button
+            type="button"
+            onClick={onTeam}
+            className="flex w-full items-center gap-3 rounded-[11px] border border-line bg-white px-3 py-2 text-left hover:border-[#c9c6bb]"
+          >
+            <span className="flex -space-x-1.5">
+              {team
+                .filter((m) => !m.archived)
+                .slice(0, 5)
+                .map((m) => (
+                  <span
+                    key={m.id}
+                    className="grid h-7 w-7 place-items-center rounded-full border-[1.5px] border-dashed border-ink bg-white text-[11px] font-extrabold"
+                  >
+                    {initials(m.name || "?")}
+                  </span>
+                ))}
+            </span>
+            <span className="flex-1 text-sm font-semibold">
+              🛠 {team.filter((m) => !m.archived).length}
+            </span>
+            <span className="text-sm font-bold text-muted">
+              {t("Управлять →")}
+            </span>
+          </button>
+        </Field>
+      )}
+      </div>
       <Field label={t("Размер задачи → рабочих дней")}>
-        <span className="grid grid-cols-[1fr_110px] items-center gap-2">
+        <span className="grid grid-cols-5 gap-2">
           {SIZES.map((k) => (
-            <span key={k} className="contents">
-              <span className="font-extrabold">{k}</span>
+            <span key={k} className="flex flex-col gap-1">
+              <span className="text-center text-xs font-extrabold">{k}</span>
               <input
                 type="number"
                 min={0.25}
                 step={0.25}
-                className={inputCls + " py-2"}
+                aria-label={k}
+                className={inputCls + " px-1.5 py-2 text-center"}
                 value={v[k] ?? ""}
                 onChange={(e) => setV((s) => ({ ...s, [k]: e.target.value }))}
               />
@@ -1279,9 +1467,18 @@ function SettingsModal({
       <p className="text-[11px] text-muted">
         {t("Изменение длительности сразу пересчитает оставшиеся дни, прогресс фаз и дату запуска.")}
       </p>
-      <div className="mt-4">
-        <TranslatePanel projectId={projectId} />
-      </div>
+      <Field label={t("Перевод для партнёров")}>
+        <button
+          type="button"
+          onClick={onTranslate}
+          className="flex w-full items-center gap-3 rounded-[11px] border border-line bg-white px-3 py-2 text-left hover:border-[#c9c6bb]"
+        >
+          <span className="flex-1 text-sm font-semibold">🌐 EN · DE</span>
+          <span className="text-sm font-bold text-muted">
+            {t("Открыть →")}
+          </span>
+        </button>
+      </Field>
       <div className="mt-5 flex flex-wrap justify-between gap-2">
         {isOwner ? (
           <Btn variant="danger" onClick={onDelete}>

@@ -12,7 +12,9 @@ import type {
   SizeDays,
   Task,
   Size,
+  TeamMember,
 } from "@/lib/types";
+import { teamDisplayName, teamRoleIcon, teamRoleLabel } from "@/lib/team";
 import { SIZES } from "@/lib/types";
 import {
   deadlineStatus,
@@ -69,6 +71,10 @@ type Props = {
   canAssign?: boolean;
   /** почта подключена — показываем, что исполнителю придёт письмо */
   emailEnabled?: boolean;
+  /** команда проекта (миграция 0015); null — не запущена */
+  team?: TeamMember[] | null;
+  /** открыть «Команду проекта» (добавить человека) */
+  onManageTeam?: () => void;
 };
 
 
@@ -91,6 +97,8 @@ export default function TaskDrawer({
   readOnly = false,
   canAssign = true,
   emailEnabled = false,
+  team = null,
+  onManageTeam,
 }: Props) {
   const { t, locale, workdays, html, lang } = useI18n();
   const ctr = useContentTr();
@@ -432,8 +440,10 @@ export default function TaskDrawer({
               emailEnabled={emailEnabled}
               me={me}
               members={members}
+              team={team}
+              onManageTeam={onManageTeam}
               readOnly={readOnly}
-              onChange={(assignee_id) => onUpdate({ assignee_id })}
+              onChange={(patch) => onUpdate(patch)}
               className={card + " sm:col-span-2"}
               labelClassName={lbl}
             />
@@ -769,11 +779,18 @@ export default function TaskDrawer({
   );
 }
 
-/** Исполнитель задачи: выбор из владельца и редакторов + «Назначить меня». */
+const ADD_TEAM = "__add_team__";
+
+/**
+ * Исполнитель задачи — один: участник (владелец / редактор) ИЛИ человек из команды проекта.
+ * Значения в списке: id участника, «team:<id>», ADD_TEAM — открыть «Команду проекта».
+ */
 function AssigneeCard({
   task,
   me,
   members,
+  team,
+  onManageTeam,
   readOnly,
   onChange,
   className,
@@ -784,14 +801,23 @@ function AssigneeCard({
   emailEnabled: boolean;
   me: Profile;
   members: Member[];
+  team: TeamMember[] | null;
+  onManageTeam?: () => void;
   readOnly: boolean;
-  onChange: (id: string | null) => void;
+  onChange: (patch: Partial<Task>) => void;
   className: string;
   labelClassName: string;
 }) {
   const { t } = useI18n();
   const people = assignable(members);
   const current = members.find((m) => m.user_id === task.assignee_id);
+  const crewCurrent = task.team_member_id
+    ? team?.find((m) => m.id === task.team_member_id)
+    : undefined;
+  // в списке — активные; назначенный архивный тоже, чтобы было видно, кто стоит
+  const crew = (team ?? []).filter(
+    (m) => !m.archived || m.id === task.team_member_id,
+  );
   const canTakeMe =
     !readOnly &&
     task.assignee_id !== me.id &&
@@ -809,6 +835,38 @@ function AssigneeCard({
       </span>
     </span>
   );
+  const crewPerson = (m: TeamMember) =>
+    m.name ? (
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <Avatar name={m.name} external />
+        <span className="truncate">
+          {m.name}
+          <span className="text-muted"> · {teamRoleLabel(m, t)}</span>
+        </span>
+      </span>
+    ) : (
+      // клиент: имени нет — только роль
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <span aria-hidden>{teamRoleIcon(m)}</span>
+        <span className="truncate">{teamDisplayName(m, t)}</span>
+      </span>
+    );
+  const value = task.team_member_id
+    ? `team:${task.team_member_id}`
+    : (task.assignee_id ?? "");
+  const grouped = !!team && (crew.length > 0 || !!onManageTeam);
+
+  function pick(v: string) {
+    if (v === ADD_TEAM) return onManageTeam?.();
+    if (v.startsWith("team:"))
+      return onChange({ team_member_id: v.slice(5), assignee_id: null });
+    onChange(
+      team
+        ? { assignee_id: v || null, team_member_id: null }
+        : { assignee_id: v || null },
+    );
+  }
+
   return (
     <div className={className}>
       <div className="flex items-baseline gap-2">
@@ -816,7 +874,7 @@ function AssigneeCard({
         {canTakeMe && (
           <button
             type="button"
-            onClick={() => onChange(me.id)}
+            onClick={() => pick(me.id)}
             className="ml-auto text-[11px] font-bold text-muted hover:text-ink"
           >
             {t("Назначить меня")}
@@ -827,15 +885,17 @@ function AssigneeCard({
         <div className="flex h-[37px] items-center rounded-lg bg-[#f5f4ef] px-2.5">
           {current ? (
             person(current)
+          ) : crewCurrent ? (
+            crewPerson(crewCurrent)
           ) : (
             <span className="text-muted">{t("— не назначен")}</span>
           )}
         </div>
       ) : (
         <Select
-          value={task.assignee_id ?? ""}
-          onChange={(v: string) => onChange(v || null)}
-          menuWidth={300}
+          value={value}
+          onChange={pick}
+          menuWidth={320}
           ariaLabel={t("Исполнитель")}
           className="!h-[37px] !rounded-lg !border-0 !bg-[#f5f4ef]"
           options={[
@@ -844,16 +904,46 @@ function AssigneeCard({
               label: <span className="text-muted">{t("— не назначен")}</span>,
             },
             // назначен тот, кто уже не может быть исполнителем, — всё равно показать
-            ...(current && !people.includes(current) ? [current] : []),
-            ...people,
-          ].map((o) =>
-            "user_id" in o ? { value: o.user_id, label: person(o) } : o,
-          )}
+            ...[...(current && !people.includes(current) ? [current] : []), ...people].map(
+              (m) => ({
+                value: m.user_id,
+                label: person(m),
+                group: grouped ? t("Участники") : undefined,
+              }),
+            ),
+            ...crew.map((m) => ({
+              value: `team:${m.id}`,
+              label: crewPerson(m),
+              group: t("Команда проекта"),
+            })),
+            ...(team && onManageTeam
+              ? [
+                  {
+                    value: ADD_TEAM,
+                    label: (
+                      <span className="font-bold text-muted">
+                        {t("＋ Добавить в команду…")}
+                      </span>
+                    ),
+                    group: t("Команда проекта"),
+                  },
+                ]
+              : []),
+          ]}
         />
       )}
       {emailEnabled && !readOnly && task.assignee_id && task.assignee_id !== me.id && (
         <div className="mt-1 text-[11px] text-muted">
           {t("Исполнителю придёт письмо, если он не отключил уведомления")}
+        </div>
+      )}
+      {!readOnly && crewCurrent && (
+        <div className="mt-1 text-[11px] text-muted">
+          {crewCurrent.contact
+            ? t("Внешний исполнитель — писем не получает. Контакт: {contact}", {
+                contact: crewCurrent.contact,
+              })
+            : t("Внешний исполнитель — писем не получает")}
         </div>
       )}
     </div>

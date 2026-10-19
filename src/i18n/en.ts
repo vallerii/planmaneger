@@ -1902,4 +1902,70 @@ export const en: Record<string, string> = {
     "Show all tasks",
   "Выделить задачи, где я исполнитель":
     "Highlight tasks assigned to me",
+  "Команда проекта":
+    "Project team",
+  "Команда проекта — программисты, дизайнеры…":
+    "Project team — developers, designers…",
+  "＋ Добавить в команду…":
+    "＋ Add to team…",
+  "Внешний исполнитель — писем не получает. Контакт: {contact}":
+    "External assignee — gets no emails. Contact: {contact}",
+  "Внешний исполнитель — писем не получает":
+    "External assignee — gets no emails",
+  "Человек с таким именем уже есть в команде":
+    "Someone with this name is already on the team",
+  "{name} добавлен в команду":
+    "{name} added to the team",
+  "{name} в архиве — в старых задачах остаётся":
+    "{name} archived — stays on existing tasks",
+  "{name} снова в команде":
+    "{name} is back on the team",
+  "Роль":
+    "Role",
+  "Какая роль? (копирайтер, SEO…)":
+    "Which role? (copywriter, SEO…)",
+  "Контакт: Telegram, телефон…":
+    "Contact: Telegram, phone…",
+  "Вернуть":
+    "Restore",
+  "Изменить":
+    "Edit",
+  "Убрать из списка выбора. В старых задачах исполнитель сохранится":
+    "Remove from the picker. Existing tasks keep this assignee",
+  "В архив":
+    "Archive",
+  "Программисты, дизайнеры и другие исполнители — без регистрации и писем. Их можно назначать на задачи. Клиент видит только роль, без имени и контакта.":
+    "Developers, designers and other contractors — no sign-up, no emails. You can assign them to tasks. Clients see only the role, not the name or contact.",
+  "В команде пока никого нет":
+    "No one on the team yet",
+  "В архиве":
+    "Archived",
+  "Добавить в команду":
+    "Add to team",
+  "Имя, например «Олег»":
+    "Name, e.g. “Oleg”",
+  "Контакт: Telegram, телефон… (необязательно)":
+    "Contact: Telegram, phone… (optional)",
+  "Такой человек уже есть в команде:":
+    "This person is already on the team:",
+  "Возможно, этот человек уже есть:":
+    "This person may already be on the team:",
+  "в архиве":
+    "archived",
+  "Добавить":
+    "Add",
+  "Программист":
+    "Developer",
+  "Дизайнер":
+    "Designer",
+  "Тестировщик":
+    "QA tester",
+  "Другое":
+    "Other",
+  "Перевод для партнёров · EN · DE":
+    "Translation for partners · EN · DE",
+  "← К настройкам":
+    "← Back to settings",
+  "Открыть →":
+    "Open →",
 };
