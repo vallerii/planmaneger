@@ -805,7 +805,7 @@ export default function ProfileApp({
               }}
             />
           </div>
-          <ProjectNav projectId={project.id} active="profile" />
+          <ProjectNav projectId={project.id} active="profile" access={!isViewer} />
           <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1 md:basis-0">
             <LangSwitcher />
             <Btn onClick={exportJson} title={t("Скачать профиль продукта в JSON")}>

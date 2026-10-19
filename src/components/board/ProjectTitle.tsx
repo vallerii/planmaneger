@@ -74,7 +74,7 @@ export default function ProjectTitle({
 
   if (editing) {
     return (
-      <div className="flex min-w-[200px] flex-1 items-center gap-1.5">
+      <div className="flex min-w-[140px] flex-1 items-center gap-1.5">
         <input
           autoFocus
           value={value}
@@ -117,7 +117,7 @@ export default function ProjectTitle({
   return (
     <div
       ref={wrap}
-      className="relative flex min-w-[200px] flex-1 items-center gap-0.5"
+      className="relative flex min-w-[140px] flex-1 items-center gap-0.5"
     >
       <h1
         className="min-w-0 truncate px-2 text-[15px] font-extrabold tracking-tight"

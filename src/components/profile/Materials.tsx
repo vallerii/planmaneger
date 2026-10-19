@@ -50,7 +50,7 @@ export default function Materials({ ctx }: { ctx: ProfileCtx }) {
           {t("+ Добавить ссылку")}
         </AddBtn>
         <p className="mt-3 text-xs text-muted">
-          {t("Пароли здесь не храните: добавьте ссылку на запись в менеджере паролей (1Password, Bitwarden…).")}
+          {t("Пароли здесь не храните — для логинов и паролей есть раздел «Доступы» (зашифрованы, клиент их не видит).")}
         </p>
       </Section>
 

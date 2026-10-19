@@ -145,7 +145,7 @@ export default function NotesApp({
                 onRename={readOnly ? undefined : rename}
               />
             </div>
-            <ProjectNav projectId={project.id} active="notes" />
+            <ProjectNav projectId={project.id} active="notes" access={!isViewer} />
             <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1 md:basis-0">
               <LangSwitcher />
               {isViewer ? (

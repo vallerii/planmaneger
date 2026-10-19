@@ -80,6 +80,8 @@ export default function MembersModal({
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const [removeId, setRemoveId] = useState<string | null>(null);
+  /** какие «Доступы» открывал участник, которого убирают (миграция 0016) */
+  const [seen, setSeen] = useState<string[]>([]);
   const [role, setRole] = useState<"editor" | "viewer">("editor");
 
   async function reload() {
@@ -146,6 +148,23 @@ export default function MembersModal({
       toast(t("Ссылка скопирована"));
   }
 
+  /** Названия доступов, которые участник смотрел или копировал. Нет миграции 0016 — пусто. */
+  async function seenBy(uid: string): Promise<string[]> {
+    if (!isOwner) return [];
+    const { data, error } = await supabase.rpc("credentials_seen_by", {
+      p_project: projectId,
+      p_user: uid,
+    });
+    if (error || !data) return [];
+    return (data as { title: string }[]).map((r) => r.title);
+  }
+
+  async function askRemove(uid: string) {
+    setSeen([]);
+    setRemoveId(uid);
+    setSeen(await seenBy(uid));
+  }
+
   async function changeRole(uid: string, next: "editor" | "viewer") {
     const { error } = await supabase.rpc("set_member_role", {
       p_project: projectId,
@@ -155,6 +174,15 @@ export default function MembersModal({
     if (error) return setError(error.message);
     toast(next === "viewer" ? t("Теперь только просмотр") : t("Теперь редактор"));
     reload();
+    if (next === "viewer") {
+      const titles = await seenBy(uid);
+      if (titles.length)
+        setError(
+          t("Он больше не видит «Доступы», но раньше открывал пароли: {list}. Лучше их сменить.", {
+            list: titles.join(", "),
+          }),
+        );
+    }
   }
 
   async function removeMember(uid: string) {
@@ -231,7 +259,7 @@ export default function MembersModal({
               )}
               {isOwner && m.role !== "owner" && (
                 <button
-                  onClick={() => setRemoveId(m.user_id)}
+                  onClick={() => askRemove(m.user_id)}
                   className={smallBtn + " hover:text-bad"}
                   title={t("Убрать из проекта")}
                 >
@@ -389,6 +417,13 @@ export default function MembersModal({
             name: <b>{removing?.profile?.full_name || removing?.profile?.email}</b>,
             project: projectName,
           },
+        )}
+        {seen.length > 0 && (
+          <div className="mt-3 rounded-[11px] border border-[#edd48e] bg-[#fff5d8] px-3 py-2 text-sm text-[#6b4c00]">
+            🔑 {t("Он открывал пароли в «Доступах»: {list}. После удаления лучше сменить эти пароли.", {
+              list: seen.join(", "),
+            })}
+          </div>
         )}
       </ConfirmDialog>
     </Modal>

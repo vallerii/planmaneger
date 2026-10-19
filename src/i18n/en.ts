@@ -1968,4 +1968,94 @@ export const en: Record<string, string> = {
     "← Back to settings",
   "Открыть →":
     "Open →",
+  "бывший участник":
+    "former member",
+  "Не удалось получить пароль":
+    "Couldn't get the password",
+  "Пароль скопирован":
+    "Password copied",
+  "Не удалось скопировать":
+    "Couldn't copy",
+  "Скопировано":
+    "Copied",
+  "Доступ добавлен":
+    "Credential added",
+  "Доступ удалён":
+    "Credential deleted",
+  "Для раздела «Доступы» запустите {file} в Supabase → SQL Editor, затем обновите страницу.":
+    "To use “Access”, run {file} in Supabase → SQL Editor, then reload the page.",
+  "Хранилище не настроено: добавьте ключ шифрования CREDENTIALS_KEY в Vercel → Settings → Environment Variables и сделайте Redeploy. Как получить ключ — в .env.local.example.":
+    "Storage isn't set up: add the CREDENTIALS_KEY encryption key in Vercel → Settings → Environment Variables and redeploy. See .env.local.example for how to generate it.",
+  "Доступы":
+    "Access",
+  "Логины и пароли клиента: админки, хостинг, почта. Пароли хранятся в зашифрованном виде, их видят только владелец и редакторы. Клиент раздел не видит. Каждый просмотр и копирование пароля записываются в журнал.":
+    "Client logins and passwords: admin panels, hosting, email. Passwords are stored encrypted and visible only to the owner and editors. Clients don't see this section. Every view and copy of a password is logged.",
+  "Журнал":
+    "Log",
+  "＋ Добавить доступ":
+    "＋ Add credential",
+  "Поиск по названию, сайту, логину…":
+    "Search by name, site, login…",
+  "Пока пусто. Добавьте первый доступ — например, админку сайта клиента.":
+    "Nothing here yet. Add the first one — for example, the client's site admin.",
+  "Логин":
+    "Login",
+  "Копировать":
+    "Copy",
+  "с":
+    "s",
+  "Скрыть":
+    "Hide",
+  "Показать":
+    "Show",
+  "не задан":
+    "not set",
+  "Изменено":
+    "Changed",
+  "Изменить доступ":
+    "Edit credential",
+  "Новый доступ":
+    "New credential",
+  "Название *":
+    "Name *",
+  "Например: Админка WordPress":
+    "E.g. WordPress admin",
+  "пусто — не менять":
+    "empty — keep current",
+  "Заметка":
+    "Note",
+  "2FA на телефоне клиента, доступ до конца проекта…":
+    "2FA on the client's phone, access until project end…",
+  "Убрать пароль":
+    "Remove password",
+  "Журнал доступов":
+    "Access log",
+  "Кто открывал и менял доступы. Видите только вы как владелец проекта.":
+    "Who opened and changed credentials. Only you, as the project owner, can see this.",
+  "Все участники":
+    "All members",
+  "Записей пока нет":
+    "No entries yet",
+  "Удалить доступ?":
+    "Delete credential?",
+  "Запись «{title}» удалится вместе с паролем. В журнале останется отметка об удалении.":
+    "“{title}” will be deleted together with its password. The log keeps a record of the deletion.",
+  "Он больше не видит «Доступы», но раньше открывал пароли: {list}. Лучше их сменить.":
+    "They no longer see “Access”, but previously opened passwords: {list}. Better change them.",
+  "Он открывал пароли в «Доступах»: {list}. После удаления лучше сменить эти пароли.":
+    "They opened passwords in “Access”: {list}. Better change these passwords after removal.",
+  "Пароли здесь не храните — для логинов и паролей есть раздел «Доступы» (зашифрованы, клиент их не видит).":
+    "Don't store passwords here — use the “Access” section for logins and passwords (encrypted, hidden from clients).",
+  "посмотрел пароль":
+    "viewed the password of",
+  "скопировал пароль":
+    "copied the password of",
+  "добавил":
+    "added",
+  "изменил":
+    "changed",
+  "удалил":
+    "deleted",
+  "Профиль":
+    "Profile",
 };

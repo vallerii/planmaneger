@@ -849,7 +849,7 @@ export default function Board({
               onRename={readOnly ? undefined : (name) => updateProject({ name })}
             />
           </div>
-          <ProjectNav projectId={project.id} active="board" />
+          <ProjectNav projectId={project.id} active="board" access={!isViewer} />
           <div className="flex w-full gap-2 overflow-x-auto md:w-auto 2xl:flex-1 2xl:basis-0 2xl:justify-end">
             {readOnly ? (
               isViewer && (
