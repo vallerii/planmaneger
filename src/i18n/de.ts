@@ -1898,4 +1898,8 @@ export const de: Record<string, string> = {
     "Planer öffnen",
   "Почта пока не подключена. Настройки сохранятся — письма начнут приходить после подключения.":
     "E-Mail ist noch nicht verbunden. Ihre Einstellungen werden gespeichert — E-Mails kommen, sobald die Verbindung steht.",
+  "Показать все задачи":
+    "Alle Aufgaben anzeigen",
+  "Выделить задачи, где я исполнитель":
+    "Mir zugewiesene Aufgaben hervorheben",
 };

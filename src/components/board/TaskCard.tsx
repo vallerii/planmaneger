@@ -49,7 +49,7 @@ export function TaskCardView({
     <div
       className={`group relative rounded-[13px] border border-[#dedcd4] bg-white p-3 transition hover:border-[#cbc8be] hover:shadow-[0_7px_18px_rgba(20,20,10,.07)] ${
         overlay ? "cursor-grabbing shadow-soft" : "cursor-grab"
-      } ${t.dimmed && !overlay ? "opacity-35" : t.status === "cancelled" ? "opacity-60" : ""}`}
+      } ${t.dimmed && !overlay ? "opacity-20 grayscale hover:opacity-60" : t.status === "cancelled" ? "opacity-60" : ""}`}
       style={{ minHeight: MIN_H[t.size] }}
     >
       <div className="flex items-start gap-[7px]">

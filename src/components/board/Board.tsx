@@ -118,7 +118,33 @@ export default function Board({
   >(null);
   const [draftTask, setDraftTask] = useState<Task | null>(null);
   /** фильтр «Исполнитель»: all — все, me — мои, none — без исполнителя, иначе id участника */
-  const [who, setWho] = useState<string>("all");
+  const [who, setWhoState] = useState<string>("all");
+  const whoKey = `pm:who:${initialProject.id}`;
+  const setWho = useCallback(
+    (v: string) => {
+      setWhoState(v);
+      try {
+        if (v === "all") localStorage.removeItem(whoKey);
+        else localStorage.setItem(whoKey, v);
+      } catch {}
+    },
+    [whoKey],
+  );
+  // выбранный фильтр запоминается для проекта (в этом браузере)
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(whoKey);
+    } catch {}
+    if (
+      saved &&
+      (saved === "me" ||
+        saved === "none" ||
+        assignable(initialMembers).some((m) => m.user_id === saved))
+    )
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setWhoState(saved);
+  }, [whoKey, initialMembers]);
   // участники открыты из настроек — по закрытию вернёмся в настройки
   const [membersFromSettings, setMembersFromSettings] = useState(false);
   const [confirmTask, setConfirmTask] = useState<string | null>(null);
@@ -199,6 +225,20 @@ export default function Board({
     return map;
   }, [phases, tasks, unread.byTask, tr, members, who, me.id]);
   const phasesView = useMemo(() => phases.map(tr.phase), [phases, tr]);
+  const iCanBeAssigned = members.some(
+    (m) => m.user_id === me.id && m.role !== "viewer",
+  );
+  // открытые задачи на мне (без выполненных и отменённых)
+  const myOpenCount = useMemo(
+    () =>
+      tasks.filter(
+        (t) =>
+          t.assignee_id === me.id &&
+          t.status !== "done" &&
+          t.status !== "cancelled",
+      ).length,
+    [tasks, me.id],
+  );
   const hypothesesView = useMemo(
     () =>
       hypotheses?.map((h) => ({
@@ -788,22 +828,35 @@ export default function Board({
       </header>
 
       <main className="px-4 pt-5 pb-10 md:px-6">
-          <div className="mb-4 flex flex-wrap items-center gap-3 text-muted">
-          <span>{t("Размер задачи:")}</span>
-          {SIZES.map((k) => (
-            <span
-              key={k}
-              className="rounded-full bg-[#e7e5dd] px-2 py-1 font-extrabold text-ink"
-            >
-              {k} · {sd[k]} {sd[k] === 1 ? t("день") : t("дн.")}
-            </span>
-          ))}
-          <span>
-            <b>P1</b>{" "}{t("— приоритет. Клик по карточке открывает детали. Отменённые задачи не учитываются в сроках.")}
-          </span>
-          {canAssign && (
-          <div className="flex items-center gap-2 md:ml-auto">
-            <span>{t("Исполнитель:")}</span>
+        {canAssign && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {iCanBeAssigned && (
+              <button
+                type="button"
+                aria-pressed={who === "me"}
+                onClick={() => setWho(who === "me" ? "all" : "me")}
+                title={
+                  who === "me"
+                    ? t("Показать все задачи")
+                    : t("Выделить задачи, где я исполнитель")
+                }
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition hover:-translate-y-px ${
+                  who === "me"
+                    ? "border-ink bg-ink text-white"
+                    : "border-line bg-white text-ink hover:border-[#c9c6bb]"
+                }`}
+              >
+                👤 {t("Мои задачи")}
+                <span
+                  className={`rounded-full px-1.5 text-xs font-extrabold ${
+                    who === "me" ? "bg-white/20" : "bg-[#e7e5dd]"
+                  }`}
+                >
+                  {myOpenCount}
+                </span>
+              </button>
+            )}
+            <span className="ml-1 text-sm text-muted">{t("Исполнитель:")}</span>
             <Select
               size="sm"
               value={who}
@@ -812,7 +865,7 @@ export default function Board({
               ariaLabel={t("Фильтр по исполнителю")}
               options={[
                 { value: "all", label: t("Все задачи") },
-                ...(members.some((m) => m.user_id === me.id && m.role !== "viewer")
+                ...(iCanBeAssigned
                   ? [{ value: "me", label: t("Мои задачи") }]
                   : []),
                 { value: "none", label: t("Без исполнителя") },
@@ -833,7 +886,20 @@ export default function Board({
               </button>
             )}
           </div>
-          )}
+        )}
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-muted">
+          <span>{t("Размер задачи:")}</span>
+          {SIZES.map((k) => (
+            <span
+              key={k}
+              className="rounded-full bg-[#e7e5dd] px-2 py-1 font-extrabold text-ink"
+            >
+              {k} · {sd[k]} {sd[k] === 1 ? t("день") : t("дн.")}
+            </span>
+          ))}
+          <span>
+            <b>P1</b>{" "}{t("— приоритет. Клик по карточке открывает детали. Отменённые задачи не учитываются в сроках.")}
+          </span>
         </div>
 
         <DndContext
